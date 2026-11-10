@@ -18,20 +18,30 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+          cache: gradle
 
-      - uses: android-actions/setup-android@v3
+      - name: Install Android command-line tools
+        run: |
+          set -e
+          mkdir -p "$HOME/android-sdk/cmdline-tools"
+          cd /tmp
+          curl -sL -o cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q cmdtools.zip
+          rm -rf "$HOME/android-sdk/cmdline-tools/latest"
+          mv cmdline-tools "$HOME/android-sdk/cmdline-tools/latest"
+          echo "ANDROID_HOME=$HOME/android-sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> "$GITHUB_ENV"
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$HOME/android-sdk/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Install SDK packages
+        run: |
+          set -e
+          yes | sdkmanager --sdk_root=$HOME/android-sdk --licenses >/dev/null || true
+          sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Make gradlew executable
         run: chmod +x gradlew
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
 
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace --no-daemon
@@ -52,16 +62,16 @@ jobs:
           body: |
             ## FRAME ${{ github.ref_name }}
 
-            Debug APK for sideloading.
+            Debug APK for sideloading on your phone.
 
-            **Install**
-            1. Download the `.apk` below
-            2. On Android: Settings → allow install from this source
-            3. Open the file and install
+            ### Install
+            1. Download `FRAME-${{ github.ref_name }}-debug.apk`
+            2. On the phone: allow Install unknown apps for Chrome/Files
+            3. Open the APK → Install
 
-            App id: `com.corelink.frame.debug`
+            Package: `com.corelink.frame.debug`
 
-            AI generation requires model weights (not included). UI, projects, editor, and export pipeline are included.
+            **Note:** AI generation needs model weights (not in this APK yet). Projects, editor, export UI work offline.
           files: out/*.apk
           prerelease: true
         env:
