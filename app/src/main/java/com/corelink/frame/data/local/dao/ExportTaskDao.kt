@@ -19,6 +19,23 @@ interface ExportTaskDao {
     @Query("SELECT * FROM export_tasks WHERE id = :id")
     suspend fun getById(id: String): ExportTaskEntity?
 
+    /**
+     * Marks exports left RUNNING after process death as FAILED.
+     * @return number of rows updated
+     */
+    @Query(
+        """
+        UPDATE export_tasks
+        SET status = 'FAILED',
+            stage = 'failed',
+            errorMessage = :message,
+            finishedAt = :finishedAt,
+            progressPercent = NULL
+        WHERE status = 'RUNNING'
+        """
+    )
+    suspend fun failInterruptedTasks(message: String, finishedAt: Long): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(task: ExportTaskEntity)
 

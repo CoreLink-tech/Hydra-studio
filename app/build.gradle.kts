@@ -104,4 +104,8 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     // ONNX Runtime Mobile — primary inference engine for Milestone 3+
     implementation(libs.onnxruntime.android)
+
+    // Unit tests
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }

@@ -28,6 +28,26 @@ interface GenerationTaskDao {
     @Query("SELECT COUNT(*) FROM generation_tasks WHERE status = 'RUNNING'")
     suspend fun countRunning(): Int
 
+    /**
+     * Marks tasks left RUNNING/CANCELLING after process death as FAILED so they
+     * cannot block the generation queue forever.
+     * @return number of rows updated
+     */
+    @Query(
+        """
+        UPDATE generation_tasks
+        SET status = 'FAILED',
+            stage = 'failed',
+            stageDetail = :message,
+            errorReason = 'UNKNOWN',
+            errorMessage = :message,
+            finishedAt = :finishedAt,
+            progressPercent = NULL
+        WHERE status IN ('RUNNING', 'CANCELLING')
+        """
+    )
+    suspend fun failInterruptedTasks(message: String, finishedAt: Long): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(task: GenerationTaskEntity)
 
