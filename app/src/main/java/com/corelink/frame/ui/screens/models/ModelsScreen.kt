@@ -1,5 +1,8 @@
 package com.corelink.frame.ui.screens.models
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -13,12 +16,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,71 +53,206 @@ fun ModelsScreen(
     viewModel: ModelsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    var manifestUrl by remember { mutableStateOf("") }
+    var importTargetId by remember { mutableStateOf<String?>(null) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri> ->
+        val id = importTargetId
+        if (id != null && uris.isNotEmpty()) {
+            viewModel.importFiles(id, uris)
+        }
+        importTargetId = null
+    }
+
+    val manifestLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) viewModel.installFromManifestUri(uri)
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
-            .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
             Text("AI Models", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 22.sp)
             Spacer(Modifier.height(4.dp))
             Text(
-                "Catalogue, install state, and device compatibility. " +
-                    "Download stays disabled until verified package URLs exist.",
+                "Install packs via download, file import, or manifest. " +
+                    "INSTALLED only after files pass size/SHA-256 checks.",
                 color = TextSecondary,
                 fontSize = 13.sp
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
+
+            // Storage + profile
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Panel, RoundedCornerShape(10.dp))
                     .border(1.dp, Border, RoundedCornerShape(10.dp))
-                    .padding(14.dp),
+                    .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
                     Text("FRAME storage", color = TextMuted, fontSize = 11.sp)
-                    Text(formatBytes(state.storageUsedBytes), color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        ModelsViewModel.formatBytes(state.storageUsedBytes),
+                        color = TextPrimary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
-                Column {
+                Column(horizontalAlignment = Alignment.End) {
                     Text("Profile", color = TextMuted, fontSize = 11.sp)
-                    Text(state.profileName ?: "Not assessed", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        state.profileName ?: "Not assessed",
+                        color = TextPrimary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
+
+            // Wi-Fi only toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Wi‑Fi only downloads", color = TextSecondary, fontSize = 13.sp)
+                Switch(
+                    checked = state.wifiOnly,
+                    onCheckedChange = { viewModel.setWifiOnly(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Accent,
+                        checkedTrackColor = AccentSoft
+                    )
+                )
+            }
+
             Row {
                 TextButton(onClick = { viewModel.refreshLocal() }) {
-                    Text("Refresh", color = Accent)
+                    Text("Refresh", color = Accent, fontSize = 13.sp)
                 }
                 TextButton(onClick = { viewModel.clearModelCache() }) {
-                    Text("Clear cache", color = TextSecondary)
+                    Text("Clear cache", color = TextSecondary, fontSize = 13.sp)
+                }
+                TextButton(onClick = { manifestLauncher.launch(arrayOf("application/json", "text/*")) }) {
+                    Text("Manifest file", color = Accent, fontSize = 13.sp)
+                }
+            }
+
+            // Manifest URL paste
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Panel, RoundedCornerShape(8.dp))
+                    .border(1.dp, Border, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BasicTextField(
+                    value = manifestUrl,
+                    onValueChange = { manifestUrl = it },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    textStyle = TextStyle(color = TextPrimary, fontSize = 13.sp),
+                    cursorBrush = SolidColor(Accent),
+                    decorationBox = { inner ->
+                        if (manifestUrl.isEmpty()) {
+                            Text("Manifest URL…", color = TextMuted, fontSize = 13.sp)
+                        }
+                        inner()
+                    }
+                )
+                TextButton(
+                    onClick = {
+                        if (manifestUrl.isNotBlank()) {
+                            viewModel.installFromManifestUrl(manifestUrl)
+                        }
+                    }
+                ) {
+                    Text("Load", color = Accent, fontSize = 13.sp)
+                }
+            }
+
+            state.message?.let { msg ->
+                Spacer(Modifier.height(6.dp))
+                Text(msg, color = Accent, fontSize = 12.sp, lineHeight = 16.sp)
+                TextButton(onClick = { viewModel.clearMessage() }) {
+                    Text("Dismiss", color = TextMuted, fontSize = 12.sp)
+                }
+            }
+
+            state.pendingLargeConfirmId?.let { id ->
+                Spacer(Modifier.height(6.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(Panel, RoundedCornerShape(8.dp))
+                        .border(1.dp, Accent, RoundedCornerShape(8.dp))
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        "Large pack (${ModelsViewModel.formatBytes(state.pendingLargeConfirmBytes)}). " +
+                            "Confirm download over current network policy?",
+                        color = TextPrimary,
+                        fontSize = 13.sp
+                    )
+                    Row {
+                        TextButton(onClick = { viewModel.confirmLargeDownload() }) {
+                            Text("Confirm $id", color = Accent, fontSize = 13.sp)
+                        }
+                        TextButton(onClick = { viewModel.dismissLargeConfirm() }) {
+                            Text("Cancel", color = TextMuted, fontSize = 13.sp)
+                        }
+                    }
                 }
             }
         }
 
         items(state.rows, key = { it.meta.id }) { row ->
-            ModelDetailCard(row)
+            ModelDetailCard(
+                row = row,
+                onDownload = { viewModel.requestDownload(row.meta.id) },
+                onCancel = { viewModel.cancelDownload(row.meta.id) },
+                onImport = {
+                    importTargetId = row.meta.id
+                    importLauncher.launch(arrayOf("*/*"))
+                }
+            )
         }
 
         item {
             Spacer(Modifier.height(8.dp))
             Text(
-                "Install is INSTALLED only after files exist under FRAME/Models/<id>/ and pass checks. " +
-                    "Research models cannot be claimed working.",
+                "Import copies files into FRAME/Models/<id>/ and checks size/SHA-256 against the catalogue. " +
+                    "Download requires URL + SHA-256 on every file. Mobile data costs can be high — keep Wi‑Fi only ON.",
                 color = TextMuted,
-                fontSize = 12.sp
+                fontSize = 12.sp,
+                lineHeight = 16.sp
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(28.dp))
         }
     }
 }
 
 @Composable
-private fun ModelDetailCard(row: ModelRow) {
+private fun ModelDetailCard(
+    row: ModelRow,
+    onDownload: () -> Unit,
+    onCancel: () -> Unit,
+    onImport: () -> Unit
+) {
     val meta = row.meta
     val statusColor = when (meta.status) {
         ModelStatus.VALIDATED -> Success
@@ -126,7 +273,7 @@ private fun ModelDetailCard(row: ModelRow) {
             .fillMaxWidth()
             .background(Panel, RoundedCornerShape(10.dp))
             .border(1.dp, Border, RoundedCornerShape(10.dp))
-            .padding(16.dp)
+            .padding(14.dp)
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(meta.displayName, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
@@ -134,40 +281,97 @@ private fun ModelDetailCard(row: ModelRow) {
         }
         Spacer(Modifier.height(4.dp))
         Text(meta.description, color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         Meta("Install", row.install.state.name, installColor)
         Meta("Params", meta.parameterCountApprox)
         Meta("Min RAM", "%.1f GB".format(meta.minRamGbRecommended))
         Meta("Runtime", meta.runtime.name.replace('_', ' '))
-        Meta("Licence", meta.licence)
-        Meta("On disk", if (row.install.bytesOnDisk > 0) formatBytes(row.install.bytesOnDisk) else "—")
+        Meta("On disk", if (row.install.bytesOnDisk > 0) ModelsViewModel.formatBytes(row.install.bytesOnDisk) else "—")
+        Meta(
+            "Files",
+            if (meta.files.isEmpty()) "none (not installable)"
+            else "${meta.files.size} declared" + if (meta.isDownloadable) " · downloadable" else " · import only"
+        )
+
+        // Per-file status when catalogue has a file list
+        if (meta.files.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            meta.files.forEach { f ->
+                val tag = when {
+                    row.install.corruptFiles.contains(f.name) -> "CORRUPT"
+                    row.install.missingFiles.contains(f.name) -> "missing"
+                    row.install.state == InstallState.INSTALLED -> "ok"
+                    row.install.state == InstallState.PARTIAL &&
+                        !row.install.missingFiles.contains(f.name) -> "ok"
+                    else -> "—"
+                }
+                val color = when (tag) {
+                    "ok" -> Success
+                    "CORRUPT" -> Danger
+                    "missing" -> Accent
+                    else -> TextMuted
+                }
+                Meta("  ${f.name}", tag, color)
+            }
+        }
+
+        row.install.validationError?.let {
+            Spacer(Modifier.height(4.dp))
+            Text(it, color = Danger, fontSize = 12.sp, lineHeight = 16.sp)
+        }
+
+        if (row.install.state == InstallState.DOWNLOADING || row.progressTotal > 0L) {
+            Spacer(Modifier.height(4.dp))
+            val label = row.progressFile ?: "…"
+            val pct = if (row.progressTotal > 0L) {
+                ((row.progressDone * 100) / row.progressTotal).toInt()
+            } else 0
+            Text(
+                "Downloading $label · $pct% (${ModelsViewModel.formatBytes(row.progressDone)})",
+                color = Accent,
+                fontSize = 12.sp
+            )
+        }
+
         if (row.recommended) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Text("Fits current device profile", color = Success, fontSize = 12.sp)
         }
         row.warning?.let {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
             Text(it, color = Danger, fontSize = 12.sp)
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(2.dp))
         Text(meta.compatibilityNotes, color = TextMuted, fontSize = 12.sp, lineHeight = 16.sp)
+
+        // Actions — thumb-sized TextButtons
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+            if (meta.isDownloadable) {
+                if (row.install.state == InstallState.DOWNLOADING) {
+                    TextButton(onClick = onCancel) {
+                        Text("Cancel", color = Danger, fontSize = 13.sp)
+                    }
+                } else {
+                    TextButton(onClick = onDownload) {
+                        Text("Download", color = Accent, fontSize = 13.sp)
+                    }
+                }
+            }
+            TextButton(onClick = onImport) {
+                Text("Import files", color = Accent, fontSize = 13.sp)
+            }
+        }
     }
 }
 
 @Composable
 private fun Meta(label: String, value: String, valueColor: androidx.compose.ui.graphics.Color = TextPrimary) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        Modifier.fillMaxWidth().padding(vertical = 1.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(label, color = TextMuted, fontSize = 12.sp)
         Text(value, color = valueColor, fontSize = 12.sp)
     }
-}
-
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    if (bytes < 1024 * 1024) return "${bytes / 1024} KB"
-    if (bytes < 1024L * 1024 * 1024) return "${bytes / (1024 * 1024)} MB"
-    return "%.1f GB".format(bytes / (1024.0 * 1024 * 1024))
 }
