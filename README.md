@@ -1,84 +1,88 @@
 # FRAME — Offline AI Film Studio
 
-**Native Android application** for offline AI video generation and film production.
+**Native Android (Kotlin + Jetpack Compose)** application for offline AI video generation and film production.
 
-> Current status: **Milestone 3 — AI Model Research + PoC scaffolding**
+> **Status: Milestones 1–11 source-complete** (`0.1.0-milestone11`)  
+> On-device AI generation requires validated model weights (see `docs/POC_CHECKLIST.md`).
 
 ## What is FRAME?
 
-FRAME lets users generate video clips with AI **entirely on-device**, organise them into scenes, edit timelines, add audio/text, and export finished films. No mandatory cloud generation.
+FRAME lets users generate video clips with AI **on-device**, organise them into scenes, edit timelines, add audio/text, and export finished films. No mandatory cloud generation.
 
-Target: Android phones starting from ~4 GB RAM (baseline validation: Galaxy A07 class).
+Target: Android phones from ~4 GB RAM (baseline: Galaxy A07 class).
 
-## Repository Structure
+## Architecture (high level)
 
 ```
-Hydra-studio/
-├── app/                          # Main Android application module
-│   └── src/main/java/com/corelink/frame/
-│       ├── ui/                   # Compose UI, theme, screens, navigation
-│       ├── data/local/           # Room database, entities, DAOs
-│       └── di/                   # Hilt modules
-├── index.html                    # Original visual prototype (reference only)
-└── README.md
+ui/           Compose screens (Home, Create, Generation, Projects, Film, Editor, Export, Models, Hardware, Settings)
+ai/           Model catalogue, ONNX runtime, generation queue, T2V pipeline
+editor/       Timeline repository (non-destructive trim/split)
+export/       Media3 Transformer export engine
+data/         Room (projects, scenes, clips, timeline, tasks, audio, export)
+hardware/     Device profiler + thermal/memory gates
+core/files/   FRAME/Projects, Models, Cache, Logs layout
 ```
 
-## Tech Stack (Milestone 1)
+## Tech stack
 
-- Kotlin
-- Jetpack Compose + Material 3
-- Navigation Compose
-- Hilt
-- Room
-- DataStore (ready)
-- Media3 (ready for later)
-- WorkManager (ready for later)
+- Kotlin, Jetpack Compose, Material 3, Navigation
+- Hilt, Room, DataStore
+- Media3 (player + Transformer)
+- ONNX Runtime Mobile
+- WorkManager (dependency ready)
 
-## Design System
+## Design system
 
-Colours taken directly from the HTML prototype:
+From the HTML prototype (visual reference only):
 
-| Token         | Hex       |
-|---------------|-----------|
-| Background    | `#111214` |
-| Sidebar/Panel | `#151619` / `#191B1F` |
-| Accent        | `#C0A47E` |
-| Text Primary  | `#E9E8E4` |
-| Text Secondary| `#92949A` |
+| Token | Hex |
+|-------|-----|
+| Background | `#111214` |
+| Panel | `#151619` / `#191B1F` |
+| Accent | `#C0A47E` |
+| Text primary | `#E9E8E4` |
 
-## Development Milestones
+## Milestones
 
-1. **Project Foundation** — done
-2. **Hardware Assessment** — done
-3. **AI Model Research + Proof of Concept** ← current
-2. Hardware Assessment
-3. AI Model Research + Proof of Concept (actual inference)
-4. Generation Engine
-5. Home + Project Management
-6. Video Editor
-7. Audio + Text
-8. Export Engine
-9. Text-to-Video
-10. Model Library + Optimisation
-11. Final QA + Release
+| # | Milestone | Status |
+|---|-----------|--------|
+| 1 | Project foundation | Done |
+| 2 | Hardware assessment | Done |
+| 3 | Model research + PoC source | Done |
+| 4 | Generation engine | Done |
+| 5 | Home + project management | Done |
+| 6 | Video editor | Done |
+| 7 | Audio + text | Done |
+| 8 | Export engine | Done |
+| 9 | Text-to-video pipeline | Done |
+| 10 | Model library + optimisation | Done |
+| 11 | Final QA + release docs | Done |
 
-## Building
+## Docs
 
-Requirements:
-- Android Studio Ladybug or newer (or AGP 8.7+)
-- JDK 17
-- Android SDK 35
+- `docs/MODEL_EVALUATION.md` — model candidates
+- `docs/POC_CHECKLIST.md` — device PoC gate
+- `docs/MILESTONE_3_REPORT.md` — inference scaffolding report
+- `docs/T2V_PIPELINE.md` — staged T2I→I2V plan
+- `docs/QA_AND_RELEASE.md` — QA checklist + limitations
+
+## Build
+
+Requires Android Studio / Android SDK (not available in pure source environments):
 
 ```bash
 ./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## Important Notes
+## Rules
 
-- The HTML prototype is a **visual reference only**. The real app is native Compose.
-- No simulated AI generation will be shipped. Generation only succeeds after real local inference + valid MP4.
-- Hardware stats are collected at runtime from Android system APIs.
+- **No simulated AI generation.** Tasks fail clearly until models are installed and validated.
+- Hardware numbers come from system APIs.
+- Source media is never rewritten by the timeline (non-destructive edits).
+- `index.html` is design reference only — the product is the native app.
 
-## Licence
+## Licence / models
 
-Private / CoreLink-tech. All rights reserved for now.
+Application code: follow repository licence.  
+AI weights: verify upstream licences before redistribution (see model catalogue entries).

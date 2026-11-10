@@ -14,14 +14,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.corelink.frame.ai.models.ModelCatalogue
-import com.corelink.frame.ai.models.ModelMetadata
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.corelink.frame.ai.models.InstallState
 import com.corelink.frame.ai.models.ModelStatus
 import com.corelink.frame.ui.theme.Accent
 import com.corelink.frame.ui.theme.AccentSoft
@@ -35,8 +37,10 @@ import com.corelink.frame.ui.theme.TextPrimary
 import com.corelink.frame.ui.theme.TextSecondary
 
 @Composable
-fun ModelsScreen() {
-    val models = remember { ModelCatalogue.all }
+fun ModelsScreen(
+    viewModel: ModelsViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -47,29 +51,51 @@ fun ModelsScreen() {
     ) {
         item {
             Spacer(Modifier.height(20.dp))
+            Text("AI Models", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 22.sp)
+            Spacer(Modifier.height(4.dp))
             Text(
-                text = "AI Models",
-                color = TextPrimary,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 22.sp
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = "Catalogue of candidate models. Status remains RESEARCH until a real on-device PoC succeeds and files are validated.",
+                "Catalogue, install state, and device compatibility. " +
+                    "Download stays disabled until verified package URLs exist.",
                 color = TextSecondary,
                 fontSize = 13.sp
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Panel, RoundedCornerShape(10.dp))
+                    .border(1.dp, Border, RoundedCornerShape(10.dp))
+                    .padding(14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("FRAME storage", color = TextMuted, fontSize = 11.sp)
+                    Text(formatBytes(state.storageUsedBytes), color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                }
+                Column {
+                    Text("Profile", color = TextMuted, fontSize = 11.sp)
+                    Text(state.profileName ?: "Not assessed", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                }
+            }
+            Row {
+                TextButton(onClick = { viewModel.refreshLocal() }) {
+                    Text("Refresh", color = Accent)
+                }
+                TextButton(onClick = { viewModel.clearModelCache() }) {
+                    Text("Clear cache", color = TextSecondary)
+                }
+            }
         }
 
-        items(models) { model ->
-            ModelCard(model)
+        items(state.rows, key = { it.meta.id }) { row ->
+            ModelDetailCard(row)
         }
 
         item {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
-                text = "Download and installation will be enabled after the first successful device proof-of-concept (Milestone 3).",
+                "Install is INSTALLED only after files exist under FRAME/Models/<id>/ and pass checks. " +
+                    "Research models cannot be claimed working.",
                 color = TextMuted,
                 fontSize = 12.sp
             )
@@ -79,12 +105,19 @@ fun ModelsScreen() {
 }
 
 @Composable
-private fun ModelCard(model: ModelMetadata) {
-    val statusColor = when (model.status) {
+private fun ModelDetailCard(row: ModelRow) {
+    val meta = row.meta
+    val statusColor = when (meta.status) {
         ModelStatus.VALIDATED -> Success
         ModelStatus.EXPERIMENTAL -> Accent
         ModelStatus.RESEARCH -> AccentSoft
         ModelStatus.INCOMPATIBLE -> Danger
+    }
+    val installColor = when (row.install.state) {
+        InstallState.INSTALLED -> Success
+        InstallState.CORRUPT, InstallState.INCOMPATIBLE -> Danger
+        InstallState.DOWNLOADING, InstallState.VERIFYING -> Accent
+        else -> TextMuted
     }
 
     Column(
@@ -94,55 +127,46 @@ private fun ModelCard(model: ModelMetadata) {
             .border(1.dp, Border, RoundedCornerShape(10.dp))
             .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = model.displayName,
-                color = TextPrimary,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp
-            )
-            Text(
-                text = model.status.name,
-                color = statusColor,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
-            )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(meta.displayName, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            Text(meta.status.name, color = statusColor, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         }
         Spacer(Modifier.height(4.dp))
-        Text(
-            text = model.description,
-            color = TextSecondary,
-            fontSize = 13.sp,
-            lineHeight = 18.sp
-        )
+        Text(meta.description, color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
         Spacer(Modifier.height(10.dp))
-        MetaRow("Params", model.parameterCountApprox)
-        MetaRow("Modes", model.generationModes.joinToString { it.name.replace('_', ' ') })
-        MetaRow("Min RAM", String.format("%.1f GB", model.minRamGbRecommended))
-        MetaRow("Runtime", model.runtime.name.replace('_', ' '))
-        MetaRow("Licence", model.licence)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = model.compatibilityNotes,
-            color = TextMuted,
-            fontSize = 12.sp,
-            lineHeight = 16.sp
-        )
+        Meta("Install", row.install.state.name, installColor)
+        Meta("Params", meta.parameterCountApprox)
+        Meta("Min RAM", "%.1f GB".format(meta.minRamGbRecommended))
+        Meta("Runtime", meta.runtime.name.replace('_', ' '))
+        Meta("Licence", meta.licence)
+        Meta("On disk", if (row.install.bytesOnDisk > 0) formatBytes(row.install.bytesOnDisk) else "—")
+        if (row.recommended) {
+            Spacer(Modifier.height(6.dp))
+            Text("Fits current device profile", color = Success, fontSize = 12.sp)
+        }
+        row.warning?.let {
+            Spacer(Modifier.height(4.dp))
+            Text(it, color = Danger, fontSize = 12.sp)
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(meta.compatibilityNotes, color = TextMuted, fontSize = 12.sp, lineHeight = 16.sp)
     }
 }
 
 @Composable
-private fun MetaRow(label: String, value: String) {
+private fun Meta(label: String, value: String, valueColor: androidx.compose.ui.graphics.Color = TextPrimary) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
+        Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(label, color = TextMuted, fontSize = 12.sp)
-        Text(value, color = TextPrimary, fontSize = 12.sp)
+        Text(value, color = valueColor, fontSize = 12.sp)
     }
+}
+
+private fun formatBytes(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+    if (bytes < 1024 * 1024) return "${bytes / 1024} KB"
+    if (bytes < 1024L * 1024 * 1024) return "${bytes / (1024 * 1024)} MB"
+    return "%.1f GB".format(bytes / (1024.0 * 1024 * 1024))
 }
