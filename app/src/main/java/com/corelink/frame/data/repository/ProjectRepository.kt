@@ -44,7 +44,8 @@ class ProjectRepository @Inject constructor(
             updatedAt = now
         )
         sceneDao.insert(scene)
-        return project
+        projectDao.update(project.copy(sceneCount = 1, updatedAt = now))
+        return project.copy(sceneCount = 1)
     }
 
     suspend fun renameProject(id: String, newName: String) {
@@ -78,12 +79,15 @@ class ProjectRepository @Inject constructor(
             updatedAt = now
         )
         sceneDao.insert(scene)
-        touchProject(projectId)
+        val p = projectDao.getById(projectId)
+        if (p != null) {
+            projectDao.update(
+                p.copy(
+                    sceneCount = count + 1,
+                    updatedAt = now
+                )
+            )
+        }
         return scene
-    }
-
-    private suspend fun touchProject(projectId: String) {
-        val p = projectDao.getById(projectId) ?: return
-        projectDao.update(p.copy(updatedAt = System.currentTimeMillis()))
     }
 }

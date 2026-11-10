@@ -56,6 +56,7 @@ import java.util.Locale
 
 @Composable
 fun ProjectsScreen(
+    onOpenProject: (String) -> Unit = {},
     viewModel: ProjectsViewModel = hiltViewModel()
 ) {
     val projects by viewModel.projects.collectAsState()
@@ -143,6 +144,7 @@ fun ProjectsScreen(
                 items(projects, key = { it.id }) { project ->
                     ProjectCard(
                         project = project,
+                        onOpen = { onOpenProject(project.id) },
                         onDelete = { viewModel.deleteProject(project.id) }
                     )
                 }
@@ -166,6 +168,7 @@ fun ProjectsScreen(
 @Composable
 private fun ProjectCard(
     project: ProjectEntity,
+    onOpen: () -> Unit,
     onDelete: () -> Unit
 ) {
     Row(
@@ -173,6 +176,7 @@ private fun ProjectCard(
             .fillMaxWidth()
             .background(Panel, RoundedCornerShape(10.dp))
             .border(1.dp, Border, RoundedCornerShape(10.dp))
+            .clickable(onClick = onOpen)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

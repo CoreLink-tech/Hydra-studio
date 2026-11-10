@@ -25,6 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.corelink.frame.ui.screens.create.CreateScreen
+import com.corelink.frame.ui.screens.film.FilmScreen
 import com.corelink.frame.ui.screens.generation.GenerationScreen
 import com.corelink.frame.ui.screens.hardware.HardwareScreen
 import com.corelink.frame.ui.screens.home.HomeScreen
@@ -95,7 +96,14 @@ fun FrameNavHost(
                     onNavigateToCreate = { navController.navigate(FrameDestination.Create.route) },
                     onNavigateToProjects = { navController.navigate(FrameDestination.Projects.route) },
                     onNavigateToModels = { navController.navigate(FrameDestination.Models.route) },
-                    onNavigateToHardware = { navController.navigate(FrameDestination.Hardware.route) }
+                    onNavigateToHardware = { navController.navigate(FrameDestination.Hardware.route) },
+                    onOpenProject = { id -> navController.navigate(FrameDestination.Film.createRoute(id)) }
+                )
+            }
+            composable(FrameDestination.Film.route) {
+                FilmScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenEditor = { id -> navController.navigate(FrameDestination.Editor.createRoute(id)) }
                 )
             }
             composable(FrameDestination.Create.route) {
@@ -111,7 +119,9 @@ fun FrameNavHost(
                 )
             }
             composable(FrameDestination.Projects.route) {
-                ProjectsScreen()
+                ProjectsScreen(
+                    onOpenProject = { id -> navController.navigate(FrameDestination.Film.createRoute(id)) }
+                )
             }
             composable(FrameDestination.Models.route) {
                 ModelsScreen()
