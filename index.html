@@ -4,495 +4,173 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#101210">
+<meta name="theme-color" content="#111214">
 <title>FRAME — Offline Film Studio</title>
 
 <style>
-:root {
-  --bg:#101210;
-  --panel:#171a17;
-  --panel2:#1d211d;
-  --panel3:#242924;
-  --border:#2c332d;
-  --text:#eef1ec;
-  --muted:#929b91;
-  --green:#a4d17c;
-  --green2:#c0e99a;
-  --danger:#d77d72;
-  --radius:13px;
+:root{
+  --bg:#111214;
+  --sidebar:#151619;
+  --panel:#191b1f;
+  --panel2:#202226;
+  --panel3:#292c30;
+  --border:#303338;
+  --text:#e9e8e4;
+  --muted:#92949a;
+  --accent:#c0a47e;
+  --accent-soft:#d0b58e;
+  --danger:#c87970;
+  --radius:9px;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
-
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:Inter,Arial,sans-serif;
-  min-height:100vh;
-  font-size:14px;
-}
-
+body{background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Arial,sans-serif;min-height:100vh;font-size:14px}
 button,input,textarea,select{font:inherit}
 button{cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-.app{
-  display:flex;
-  min-height:100vh;
-}
-
-.sidebar{
-  width:244px;
-  flex-shrink:0;
-  background:#141714;
-  border-right:1px solid var(--border);
-  padding:24px 15px;
-  display:flex;
-  flex-direction:column;
-  position:fixed;
-  inset:0 auto 0 0;
-  z-index:10;
-}
-
-.brand{
-  display:flex;
-  align-items:center;
-  gap:11px;
-  padding:0 10px 30px;
-}
-
-.brand-mark{
-  width:34px;
-  height:34px;
-  border:1px solid #789b5b;
-  border-radius:10px;
-  display:grid;
-  place-items:center;
-  color:var(--green);
-  font-size:19px;
-  font-weight:700;
-}
-
+.app{display:flex;min-height:100vh}
+.sidebar{width:244px;flex-shrink:0;background:var(--sidebar);border-right:1px solid var(--border);padding:24px 15px;display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;z-index:10}
+.brand{display:flex;align-items:center;gap:11px;padding:0 10px 30px}
+.brand-mark{width:34px;height:34px;border:1px solid #77716a;border-radius:7px;display:grid;place-items:center;color:var(--accent-soft);font-size:18px;font-weight:700}
 .brand-name{font-size:17px;font-weight:700;letter-spacing:2px}
 .brand-sub{font-size:9px;color:var(--muted);letter-spacing:1.5px;margin-top:3px}
-
-.nav-label{
-  color:#697269;
-  font-size:10px;
-  font-weight:700;
-  letter-spacing:1.5px;
-  padding:12px 12px 8px;
-}
-
-.nav-item{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  width:100%;
-  background:none;
-  border:0;
-  color:#a4aca2;
-  padding:11px 12px;
-  border-radius:8px;
-  text-align:left;
-  margin-bottom:3px;
-  transition:.2s;
-}
-
-.nav-item:hover,.nav-item.active{
-  background:#252d24;
-  color:var(--green2);
-}
-
-.nav-icon{
-  width:18px;
-  text-align:center;
-  font-size:16px;
-}
-
-.sidebar-bottom{
-  margin-top:auto;
-  border-top:1px solid var(--border);
-  padding-top:17px;
-}
-
-.device-card{
-  background:#1c211b;
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:13px;
-  margin:0 5px 14px;
-}
-
+.nav-label{color:#73757a;font-size:10px;font-weight:700;letter-spacing:1.4px;padding:12px 12px 8px}
+.nav-item{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;color:#a6a7aa;padding:11px 12px;border-radius:6px;text-align:left;margin-bottom:3px;transition:.18s}
+.nav-item:hover{background:#222429;color:var(--text)}
+.nav-item.active{background:#292a2c;color:var(--accent-soft)}
+.nav-icon{width:18px;text-align:center;font-size:16px}
+.sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding-top:17px}
+.device-card{background:#1c1e21;border:1px solid var(--border);border-radius:8px;padding:13px;margin:0 5px 14px}
 .device-row{display:flex;align-items:center;gap:8px}
-.status-dot{
-  width:7px;height:7px;border-radius:50%;
-  background:var(--green);
-}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#9aab91}
 .device-title{font-size:12px;font-weight:600}
 .device-small{font-size:10px;color:var(--muted);margin-top:5px}
 
-.main{
-  margin-left:244px;
-  width:calc(100% - 244px);
-  min-width:0;
-}
-
-.topbar{
-  height:67px;
-  border-bottom:1px solid var(--border);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 34px;
-  background:#121512;
-  position:sticky;
-  top:0;
-  z-index:5;
-}
-
+.main{margin-left:244px;width:calc(100% - 244px);min-width:0}
+.topbar{height:67px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 34px;background:#151619;position:sticky;top:0;z-index:5}
 .breadcrumb{color:var(--muted);font-size:12px}
 .breadcrumb strong{color:var(--text);font-weight:600}
-
 .top-actions{display:flex;align-items:center;gap:12px}
-.icon-btn{
-  width:34px;height:34px;
-  border:1px solid var(--border);
-  background:var(--panel);
-  color:#c6cec2;
-  border-radius:8px;
-}
-
-.avatar{
-  width:32px;height:32px;border-radius:50%;
-  background:#33412d;color:var(--green2);
-  display:grid;place-items:center;font-weight:700;
-}
-
-.content{
-  max-width:1500px;
-  margin:auto;
-  padding:32px 36px 70px;
-}
-
-.page{display:none;animation:appear .22s ease}
+.icon-btn{width:34px;height:34px;border:1px solid var(--border);background:var(--panel);color:#c6c5c1;border-radius:7px}
+.avatar{width:32px;height:32px;border-radius:50%;background:#35312b;color:var(--accent-soft);display:grid;place-items:center;font-weight:700}
+.content{max-width:1500px;margin:auto;padding:32px 36px 70px}
+.page{display:none;animation:appear .18s ease}
 .page.active{display:block}
+@keyframes appear{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 
-@keyframes appear{
-  from{opacity:0;transform:translateY(5px)}
-  to{opacity:1;transform:translateY(0)}
-}
-
-.page-heading{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:20px;
-  margin-bottom:27px;
-}
-
-.eyebrow{
-  color:var(--green);
-  font-size:10px;
-  font-weight:700;
-  letter-spacing:1.8px;
-  text-transform:uppercase;
-  margin-bottom:9px;
-}
-
-h1{font-size:27px;letter-spacing:-.8px;font-weight:650}
+.page-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:27px}
+.eyebrow{color:var(--accent);font-size:10px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;margin-bottom:9px}
+h1{font-size:27px;letter-spacing:-.7px;font-weight:650}
 h2{font-size:17px;font-weight:600}
 h3{font-size:13px;font-weight:600}
-.subtitle{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.6}
-
-.btn{
-  border:1px solid var(--border);
-  background:var(--panel2);
-  color:var(--text);
-  padding:10px 15px;
-  border-radius:8px;
-  font-size:12px;
-  font-weight:600;
-  transition:.2s;
-}
-
-.btn:hover{background:var(--panel3);border-color:#52604e}
-.btn.primary{
-  background:var(--green);
-  border-color:var(--green);
-  color:#172014;
-}
-.btn.primary:hover{background:var(--green2)}
+.subtitle{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.7}
+.btn{border:1px solid #3a3d42;background:var(--panel2);color:var(--text);padding:10px 15px;border-radius:6px;font-size:12px;font-weight:600;transition:.18s}
+.btn:hover{background:var(--panel3);border-color:#555960}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#171716}
+.btn.primary:hover{background:var(--accent-soft)}
 .btn.small{padding:7px 11px;font-size:11px}
 .btn.danger{color:var(--danger)}
 
 .grid{display:grid;gap:16px}
 .stats-grid{grid-template-columns:repeat(4,1fr);margin-bottom:23px}
-
-.card{
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:19px;
-  min-width:0;
-}
-
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:19px;min-width:0}
 .stat-label{font-size:11px;color:var(--muted)}
 .stat-number{font-size:25px;font-weight:650;margin-top:12px}
-.stat-foot{font-size:10px;color:var(--green);margin-top:7px}
-
-.section-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin:27px 0 14px;
-}
-
+.stat-foot{font-size:10px;color:#b5a184;margin-top:7px}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin:27px 0 14px}
 .section-head p{font-size:11px;color:var(--muted);margin-top:5px}
-
 .project-grid{grid-template-columns:repeat(3,1fr)}
-
-.project-thumb{
-  height:155px;
-  border-radius:9px;
-  background:#252c25;
-  overflow:hidden;
-  position:relative;
-  margin-bottom:13px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.thumb-one{
-  background:linear-gradient(145deg,#38483d,#17221d 60%,#101510);
-}
-.thumb-two{
-  background:linear-gradient(145deg,#665345,#29251f 65%,#161613);
-}
-.thumb-three{
-  background:linear-gradient(145deg,#374c59,#1c2930 60%,#11191c);
-}
-
-.landscape{
-  position:absolute;
-  bottom:0;left:0;right:0;
-  height:47%;
-  background:linear-gradient(150deg,transparent 30%,#101713 31%);
-  opacity:.9;
-}
-
-.thumb-center{
-  font-size:10px;
-  letter-spacing:3px;
-  color:#d5dfd0;
-  z-index:1;
-}
-
-.project-meta{
-  display:flex;justify-content:space-between;
-  color:var(--muted);font-size:10px;margin-top:8px;
-}
-
+.project-thumb{height:155px;border-radius:7px;background:#292b2e;overflow:hidden;position:relative;margin-bottom:13px;display:flex;align-items:center;justify-content:center}
+.thumb-one{background:#303a37}
+.thumb-two{background:#443b35}
+.thumb-three{background:#303941}
+.landscape{position:absolute;bottom:0;left:0;right:0;height:47%;background:#171b1a;clip-path:polygon(0 65%,25% 20%,43% 55%,66% 5%,100% 62%,100% 100%,0 100%);opacity:.8}
+.thumb-center{font-size:10px;letter-spacing:2.5px;color:#e1dfd8;z-index:1}
+.project-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin-top:8px}
 .two-col{grid-template-columns:1.5fr 1fr}
 .three-col{grid-template-columns:repeat(3,1fr)}
 
-.activity-item{
-  display:flex;align-items:center;gap:12px;
-  padding:13px 0;border-bottom:1px solid var(--border);
-}
+.activity-item{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)}
 .activity-item:last-child{border:0}
-.activity-icon{
-  width:34px;height:34px;border-radius:8px;
-  background:#283126;display:grid;place-items:center;
-  color:var(--green);
-}
-.activity-info{flex:1}
+.activity-icon{width:34px;height:34px;border-radius:7px;background:#292b2f;display:grid;place-items:center;color:var(--accent)}
+.activity-info{flex:1;min-width:0}
 .activity-info strong{font-size:11px;display:block}
 .activity-info span{font-size:10px;color:var(--muted);display:block;margin-top:4px}
+.tag{display:inline-flex;padding:5px 8px;border-radius:4px;background:#302d28;color:#d0b58e;font-size:9px;white-space:nowrap}
 
 .field{margin-bottom:19px}
-.field label{
-  display:block;color:#cbd2c8;
-  font-size:11px;font-weight:600;margin-bottom:9px;
-}
-.field input,.field textarea,.field select{
-  width:100%;background:#111511;
-  color:var(--text);border:1px solid var(--border);
-  border-radius:8px;padding:12px;
-  outline:none;
-}
-.field input:focus,.field textarea:focus,.field select:focus{
-  border-color:#789b5b;
-}
-.field textarea{min-height:125px;resize:vertical;line-height:1.6}
+.field label{display:block;color:#d0cfca;font-size:11px;font-weight:600;margin-bottom:9px}
+.field input,.field textarea,.field select{width:100%;background:#121417;color:var(--text);border:1px solid #34373c;border-radius:6px;padding:12px;outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:#9b876a}
+.field textarea{min-height:125px;resize:vertical;line-height:1.7}
 .field select{appearance:auto}
-.hint{color:var(--muted);font-size:10px;margin-top:7px}
+.hint{color:var(--muted);font-size:10px;margin-top:7px;line-height:1.5}
 
-.mode-switch{
-  display:flex;gap:7px;
-  background:#111511;padding:5px;
-  border:1px solid var(--border);
-  border-radius:9px;margin-bottom:22px;
-}
-.mode-switch button{
-  flex:1;background:none;border:0;
-  color:var(--muted);padding:11px;border-radius:6px;
-  font-size:11px;
-}
-.mode-switch button.active{
-  background:#2a3427;color:var(--green2);
-}
-
+.mode-switch{display:flex;gap:7px;background:#121417;padding:5px;border:1px solid var(--border);border-radius:7px;margin-bottom:22px}
+.mode-switch button{flex:1;background:none;border:0;color:var(--muted);padding:11px;border-radius:5px;font-size:11px}
+.mode-switch button.active{background:#303033;color:var(--accent-soft)}
 .choice-row{display:flex;gap:8px;flex-wrap:wrap}
-.choice{
-  background:#111511;border:1px solid var(--border);
-  color:#aab3a7;border-radius:7px;
-  padding:9px 13px;font-size:11px;
-}
-.choice.active{
-  border-color:#77995d;color:var(--green2);
-  background:#263124;
-}
+.choice{background:#121417;border:1px solid var(--border);color:#aab0b5;border-radius:6px;padding:9px 13px;font-size:11px}
+.choice.active{border-color:#9b876a;color:var(--accent-soft);background:#292724}
 
-.upload-box{
-  border:1px dashed #495448;
-  background:#131713;
-  border-radius:9px;padding:27px 15px;
-  text-align:center;color:var(--muted);
-  cursor:pointer;
-}
-.upload-box strong{display:block;color:#dce3d9;font-size:12px;margin:9px 0 5px}
+.upload-box{border:1px dashed #55565a;background:#151619;border-radius:7px;padding:27px 15px;text-align:center;color:var(--muted);cursor:pointer}
+.upload-box strong{display:block;color:#deddd8;font-size:12px;margin:9px 0 5px}
 .upload-box span{font-size:10px}
+.upload-preview{max-width:100%;max-height:220px;object-fit:contain;margin-top:12px;border-radius:6px}
 
 .create-layout{grid-template-columns:minmax(0,1.4fr) minmax(250px,.7fr)}
-.preview-box{
-  min-height:320px;border:1px solid var(--border);
-  border-radius:10px;background:#0c100d;
-  display:flex;align-items:center;justify-content:center;
-  flex-direction:column;text-align:center;padding:20px;
-}
-.preview-symbol{font-size:34px;color:#56674f;margin-bottom:14px}
-.preview-box p{font-size:11px;color:var(--muted);line-height:1.7}
+.preview-box{min-height:320px;border:1px solid var(--border);border-radius:8px;background:#101113;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:20px}
+.preview-symbol{font-size:34px;color:#8f877b;margin-bottom:14px}
+.preview-box p{font-size:11px;color:var(--muted);line-height:1.7;max-width:320px;margin-top:8px}
 
-.progress-track{
-  height:5px;background:#2a3029;border-radius:10px;
-  overflow:hidden;margin:13px 0;
-}
-.progress-fill{
-  height:100%;width:0;background:var(--green);
-  transition:width .3s;
-}
-
-.progress-line{
-  display:flex;justify-content:space-between;
-  font-size:10px;color:var(--muted);
-}
-
-.tag{
-  display:inline-flex;padding:5px 8px;
-  border-radius:5px;background:#273126;
-  color:var(--green2);font-size:9px;
-}
+.progress-track{height:5px;background:#303237;border-radius:10px;overflow:hidden;margin:13px 0}
+.progress-fill{height:100%;width:0;background:var(--accent);transition:width .3s}
+.progress-line{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
 
 .scene-list{display:flex;flex-direction:column;gap:9px}
-.scene{
-  display:flex;align-items:center;gap:12px;
-  background:#171c17;border:1px solid var(--border);
-  border-radius:9px;padding:11px;
-}
-.scene-number{
-  width:27px;height:27px;border-radius:6px;
-  display:grid;place-items:center;background:#293329;
-  color:var(--green2);font-size:10px;
-}
+.scene{display:flex;align-items:center;gap:12px;background:#191b1f;border:1px solid var(--border);border-radius:7px;padding:11px}
+.scene-number{width:27px;height:27px;border-radius:5px;display:grid;place-items:center;background:#302d28;color:var(--accent-soft);font-size:10px}
 .scene-info{flex:1;min-width:0}
 .scene-info strong{font-size:11px;display:block}
 .scene-info span{font-size:10px;color:var(--muted);display:block;margin-top:4px}
 
-.timeline{
-  overflow-x:auto;background:#111511;
-  border:1px solid var(--border);
-  border-radius:10px;padding:16px;
-}
-.time-ruler{
-  display:flex;justify-content:space-between;
-  color:#697269;font-size:9px;margin:0 0 13px 110px;
-  min-width:550px;
-}
-.track{
-  display:flex;align-items:center;gap:10px;
-  min-width:660px;margin-bottom:9px;
-}
+.timeline{overflow-x:auto;background:#111315;border:1px solid var(--border);border-radius:8px;padding:16px}
+.time-ruler{display:flex;justify-content:space-between;color:#85878b;font-size:9px;margin:0 0 13px 110px;min-width:550px}
+.track{display:flex;align-items:center;gap:10px;min-width:660px;margin-bottom:9px}
 .track-label{width:100px;flex-shrink:0;font-size:10px;color:var(--muted)}
-.track-content{
-  flex:1;height:43px;background:#1b211b;
-  border-radius:5px;display:flex;gap:4px;padding:4px;
-}
-.clip-block{
-  min-width:70px;flex:1;border-radius:4px;
-  background:#40543b;color:#e1eed8;
-  padding:7px;font-size:9px;
-  overflow:hidden;
-}
-.clip-block.audio{background:#354e50}
-.clip-block.textclip{background:#51483b}
+.track-content{flex:1;height:43px;background:#1b1d21;border-radius:4px;display:flex;gap:4px;padding:4px}
+.clip-block{min-width:70px;flex:1;border-radius:3px;background:#4b514d;color:#e5e4df;padding:7px;font-size:9px;overflow:hidden}
+.clip-block.audio{background:#39494b}
+.clip-block.textclip{background:#51483d}
 
-.model-row{
-  display:flex;align-items:center;gap:13px;
-  padding:15px 0;border-bottom:1px solid var(--border);
-}
-.model-icon{
-  width:39px;height:39px;border-radius:9px;
-  background:#293329;color:var(--green);
-  display:grid;place-items:center;font-size:17px;
-}
-.model-details{flex:1}
+.model-row{display:flex;align-items:center;gap:13px;padding:15px 0;border-bottom:1px solid var(--border)}
+.model-icon{width:39px;height:39px;border-radius:7px;background:#302d28;color:var(--accent);display:grid;place-items:center;font-size:17px;flex-shrink:0}
+.model-details{flex:1;min-width:0}
 .model-details strong{font-size:12px;display:block}
 .model-details span{font-size:10px;color:var(--muted);display:block;margin-top:5px}
 
-.setting-row{
-  display:flex;justify-content:space-between;
-  align-items:center;gap:15px;padding:16px 0;
-  border-bottom:1px solid var(--border);
-}
+.setting-row{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:16px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:0}
 .setting-row strong{font-size:11px;display:block}
 .setting-row span{font-size:10px;color:var(--muted);display:block;margin-top:5px}
+.setting-row .tag{color:#d0b58e;margin-top:0}
 
-.toggle{
-  width:38px;height:21px;border-radius:20px;
-  background:#343b34;position:relative;border:0;
-}
-.toggle:after{
-  content:"";position:absolute;width:15px;height:15px;
-  background:#eee;border-radius:50%;left:3px;top:2px;
-  transition:.2s;
-}
-.toggle.on{background:#789b5b}
+.toggle{width:38px;height:21px;border-radius:20px;background:#34373c;position:relative;border:0;flex-shrink:0}
+.toggle:after{content:"";position:absolute;width:15px;height:15px;background:#eee;border-radius:50%;left:3px;top:2px;transition:.2s}
+.toggle.on{background:#98846a}
 .toggle.on:after{left:19px}
 
-.empty{
-  text-align:center;padding:55px 15px;
-  color:var(--muted);font-size:12px;
-}
+.empty{text-align:center;padding:55px 15px;color:var(--muted);font-size:12px}
 .empty strong{display:block;color:var(--text);margin-bottom:8px}
-
 .mobile-nav{display:none}
-
-.toast{
-  position:fixed;bottom:25px;right:25px;
-  background:#263326;border:1px solid #52654b;
-  color:#e2f2d9;padding:13px 17px;
-  border-radius:8px;font-size:11px;
-  opacity:0;transform:translateY(10px);
-  transition:.25s;pointer-events:none;z-index:30;
-}
+.toast{position:fixed;bottom:25px;right:25px;background:#292a2c;border:1px solid #55504a;color:#eee;padding:13px 17px;border-radius:7px;font-size:11px;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none;z-index:30}
 .toast.show{opacity:1;transform:translateY(0)}
 
 @media(max-width:1050px){
   .stats-grid{grid-template-columns:repeat(2,1fr)}
   .project-grid{grid-template-columns:repeat(2,1fr)}
 }
-
 @media(max-width:760px){
   .sidebar{display:none}
   .main{margin-left:0;width:100%}
@@ -508,26 +186,15 @@ h3{font-size:13px;font-weight:600}
   .stats-grid{gap:9px}
   .card{padding:14px}
   .stat-number{font-size:21px}
-  .mobile-nav{
-    display:flex;position:fixed;bottom:0;left:0;right:0;
-    height:67px;background:#151915;
-    border-top:1px solid var(--border);
-    justify-content:space-around;align-items:center;
-    z-index:15;padding-bottom:env(safe-area-inset-bottom);
-  }
-  .mobile-nav button{
-    border:0;background:none;color:#879087;
-    display:flex;flex-direction:column;
-    align-items:center;gap:5px;font-size:9px;
-  }
-  .mobile-nav button.active{color:var(--green2)}
+  .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;min-height:67px;background:#151619;border-top:1px solid var(--border);justify-content:space-around;align-items:center;z-index:15;padding:7px 0 calc(7px + env(safe-area-inset-bottom))}
+  .mobile-nav button{border:0;background:none;color:#92949a;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:9px}
+  .mobile-nav button.active{color:var(--accent-soft)}
   .mobile-nav span{font-size:17px}
   .top-actions .icon-btn{display:none}
   .page-heading{margin-bottom:20px}
   .section-head{margin-top:22px}
   .toast{left:15px;right:15px;bottom:80px;text-align:center}
 }
-
 @media(max-width:390px){
   .project-grid{grid-template-columns:1fr}
   .stats-grid{grid-template-columns:1fr 1fr}
@@ -582,7 +249,6 @@ h3{font-size:13px;font-weight:600}
 
 <div class="content">
 
-<!-- HOME -->
 <section class="page active" id="home">
   <div class="page-heading">
     <div>
@@ -594,26 +260,10 @@ h3{font-size:13px;font-weight:600}
   </div>
 
   <div class="grid stats-grid">
-    <div class="card">
-      <div class="stat-label">Total projects</div>
-      <div class="stat-number">08</div>
-      <div class="stat-foot">Your creative library</div>
-    </div>
-    <div class="card">
-      <div class="stat-label">Generated clips</div>
-      <div class="stat-number">34</div>
-      <div class="stat-foot">Saved locally</div>
-    </div>
-    <div class="card">
-      <div class="stat-label">Storage used</div>
-      <div class="stat-number">2.4 GB</div>
-      <div class="stat-foot">Local storage</div>
-    </div>
-    <div class="card">
-      <div class="stat-label">Installed models</div>
-      <div class="stat-number">02</div>
-      <div class="stat-foot">Available offline</div>
-    </div>
+    <div class="card"><div class="stat-label">Total projects</div><div class="stat-number">08</div><div class="stat-foot">Your creative library</div></div>
+    <div class="card"><div class="stat-label">Generated clips</div><div class="stat-number">34</div><div class="stat-foot">Saved locally</div></div>
+    <div class="card"><div class="stat-label">Storage used</div><div class="stat-number">2.4 GB</div><div class="stat-foot">Local storage</div></div>
+    <div class="card"><div class="stat-label">Installed models</div><div class="stat-number">02</div><div class="stat-foot">Available offline</div></div>
   </div>
 
   <div class="grid two-col">
@@ -622,17 +272,17 @@ h3{font-size:13px;font-weight:600}
         <div><h2>Start creating</h2><p>Choose how you want to begin.</p></div>
       </div>
       <div class="grid two-col">
-        <div class="card" style="background:#202820;cursor:pointer" onclick="go('create')">
+        <div class="card" style="background:#202226;cursor:pointer" onclick="go('create');setMode('text')">
           <div class="eyebrow">01 / GENERATION</div>
           <h2>Text to video</h2>
           <p class="subtitle">Turn a written scene description into a video clip.</p>
-          <div style="margin-top:22px;color:var(--green)">↗ Create clip</div>
+          <div style="margin-top:22px;color:var(--accent)">↗ Create clip</div>
         </div>
-        <div class="card" style="background:#202820;cursor:pointer" onclick="go('create');setMode('image')">
+        <div class="card" style="background:#202226;cursor:pointer" onclick="go('create');setMode('image')">
           <div class="eyebrow">02 / GENERATION</div>
           <h2>Image to video</h2>
           <p class="subtitle">Bring a still image to life with motion.</p>
-          <div style="margin-top:22px;color:var(--green)">↗ Animate image</div>
+          <div style="margin-top:22px;color:var(--accent)">↗ Animate image</div>
         </div>
       </div>
     </div>
@@ -642,21 +292,9 @@ h3{font-size:13px;font-weight:600}
         <div><h2>Recent activity</h2><p>Your latest work.</p></div>
         <button class="btn small" onclick="go('projects')">View all</button>
       </div>
-      <div class="activity-item">
-        <div class="activity-icon">▶</div>
-        <div class="activity-info"><strong>The Last Journey</strong><span>Project updated · 12 minutes ago</span></div>
-        <span class="tag">Project</span>
-      </div>
-      <div class="activity-item">
-        <div class="activity-icon">✳</div>
-        <div class="activity-info"><strong>Mountain Sunrise</strong><span>Clip generated · Yesterday</span></div>
-        <span class="tag">Clip</span>
-      </div>
-      <div class="activity-item">
-        <div class="activity-icon">▣</div>
-        <div class="activity-info"><strong>Motion model</strong><span>Model installed · 2 days ago</span></div>
-        <span class="tag">Model</span>
-      </div>
+      <div class="activity-item"><div class="activity-icon">▶</div><div class="activity-info"><strong>The Last Journey</strong><span>Project updated · 12 minutes ago</span></div><span class="tag">Project</span></div>
+      <div class="activity-item"><div class="activity-icon">✳</div><div class="activity-info"><strong>Mountain Sunrise</strong><span>Clip generated · Yesterday</span></div><span class="tag">Clip</span></div>
+      <div class="activity-item"><div class="activity-icon">▣</div><div class="activity-info"><strong>Motion model</strong><span>Model installed · 2 days ago</span></div><span class="tag">Model</span></div>
     </div>
   </div>
 
@@ -664,57 +302,30 @@ h3{font-size:13px;font-weight:600}
     <div><h2>Recent projects</h2><p>Continue where you left off.</p></div>
     <button class="btn small" onclick="go('projects')">All projects →</button>
   </div>
-
   <div class="grid project-grid">
-    <div class="card">
-      <div class="project-thumb thumb-one"><div class="landscape"></div><div class="thumb-center">THE LAST JOURNEY</div></div>
-      <h3>The Last Journey</h3>
-      <div class="project-meta"><span>6 scenes</span><span>Updated today</span></div>
-    </div>
-    <div class="card">
-      <div class="project-thumb thumb-two"><div class="landscape"></div><div class="thumb-center">AFTER THE STORM</div></div>
-      <h3>After the Storm</h3>
-      <div class="project-meta"><span>4 scenes</span><span>Yesterday</span></div>
-    </div>
-    <div class="card">
-      <div class="project-thumb thumb-three"><div class="landscape"></div><div class="thumb-center">BLUE HORIZON</div></div>
-      <h3>Blue Horizon</h3>
-      <div class="project-meta"><span>8 scenes</span><span>3 days ago</span></div>
-    </div>
+    <div class="card" onclick="go('film')" style="cursor:pointer"><div class="project-thumb thumb-one"><div class="landscape"></div><div class="thumb-center">THE LAST JOURNEY</div></div><h3>The Last Journey</h3><div class="project-meta"><span>6 scenes</span><span>Updated today</span></div></div>
+    <div class="card" onclick="go('film')" style="cursor:pointer"><div class="project-thumb thumb-two"><div class="landscape"></div><div class="thumb-center">AFTER THE STORM</div></div><h3>After the Storm</h3><div class="project-meta"><span>4 scenes</span><span>Yesterday</span></div></div>
+    <div class="card" onclick="go('film')" style="cursor:pointer"><div class="project-thumb thumb-three"><div class="landscape"></div><div class="thumb-center">BLUE HORIZON</div></div><h3>Blue Horizon</h3><div class="project-meta"><span>8 scenes</span><span>3 days ago</span></div></div>
   </div>
 </section>
 
-<!-- ONBOARDING -->
 <section class="page" id="onboarding">
-  <div class="page-heading">
-    <div><div class="eyebrow">WELCOME TO FRAME</div><h1>Your mobile film studio.</h1>
-    <p class="subtitle">A local-first creative environment designed around your Android device.</p></div>
-  </div>
+  <div class="page-heading"><div><div class="eyebrow">WELCOME TO FRAME</div><h1>Your mobile film studio.</h1><p class="subtitle">A local-first creative environment designed around your Android device.</p></div></div>
   <div class="grid two-col">
     <div class="card">
-      <div class="eyebrow">GETTING STARTED</div>
-      <h2>Set up your studio</h2>
+      <div class="eyebrow">GETTING STARTED</div><h2>Set up your studio</h2>
       <p class="subtitle">Before generating videos, FRAME needs to understand your device and available storage.</p>
       <div class="activity-item"><div class="activity-icon">01</div><div class="activity-info"><strong>Check device capability</strong><span>Identify memory and hardware limits.</span></div></div>
       <div class="activity-item"><div class="activity-icon">02</div><div class="activity-info"><strong>Choose a model profile</strong><span>Use a profile appropriate for your device.</span></div></div>
       <div class="activity-item"><div class="activity-icon">03</div><div class="activity-info"><strong>Install your first model</strong><span>Download the required model files.</span></div></div>
       <button class="btn primary" style="margin-top:20px" onclick="go('hardware')">Configure device →</button>
     </div>
-    <div class="preview-box">
-      <div class="preview-symbol">◈</div>
-      <h2>Made for local creation</h2>
-      <p>Generate clips, build scenes and assemble films without depending on a cloud rendering service.</p>
-    </div>
+    <div class="preview-box"><div class="preview-symbol">◈</div><h2>Made for local creation</h2><p>Generate clips, build scenes and assemble films without depending on a cloud rendering service.</p></div>
   </div>
 </section>
 
-<!-- HARDWARE -->
 <section class="page" id="hardware">
-  <div class="page-heading">
-    <div><div class="eyebrow">SYSTEM CONFIGURATION</div><h1>Device profile</h1>
-    <p class="subtitle">Review your device capabilities and select an appropriate generation profile.</p></div>
-    <button class="btn" onclick="toast('Device check requested')">↻ Recheck device</button>
-  </div>
+  <div class="page-heading"><div><div class="eyebrow">SYSTEM CONFIGURATION</div><h1>Device profile</h1><p class="subtitle">Review your device capabilities and select an appropriate generation profile.</p></div><button class="btn" onclick="toast('Device check requested')">↻ Recheck device</button></div>
   <div class="grid two-col">
     <div class="card">
       <h2>Device information</h2>
@@ -727,409 +338,119 @@ h3{font-size:13px;font-weight:600}
     <div class="card">
       <h2>Generation profile</h2>
       <p class="subtitle">Choose a profile. Actual model support must be validated against your device hardware.</p>
-      <div class="field" style="margin-top:20px">
-        <label>Performance profile</label>
-        <select id="profile">
-          <option>Balanced · 4GB baseline</option>
-          <option>Low memory · 3GB devices</option>
-          <option>Performance · 6GB devices</option>
-          <option>High performance · 8GB+ devices</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Preferred processing</label>
-        <select><option>Automatic selection</option><option>CPU</option><option>GPU where supported</option></select>
-      </div>
+      <div class="field" style="margin-top:20px"><label>Performance profile</label><select id="profile"><option>Balanced · 4GB baseline</option><option>Low memory · 3GB devices</option><option>Performance · 6GB devices</option><option>High performance · 8GB+ devices</option></select></div>
+      <div class="field"><label>Preferred processing</label><select><option>Automatic selection</option><option>CPU</option><option>GPU where supported</option></select></div>
       <button class="btn primary" onclick="toast('Profile saved')">Save device profile</button>
     </div>
   </div>
-  <div class="card" style="margin-top:17px">
-    <h2>Hardware compatibility</h2>
-    <p class="subtitle">RAM alone does not determine whether a video model will run. Chipset, memory bandwidth, GPU support, thermal limits and model quantization also matter.</p>
-    <div class="progress-line" style="margin-top:20px"><span>Device assessment</span><span>Awaiting native hardware scan</span></div>
-  </div>
+  <div class="card" style="margin-top:17px"><h2>Hardware compatibility</h2><p class="subtitle">RAM alone does not determine whether a video model will run. Chipset, memory bandwidth, GPU support, thermal limits and model quantization also matter.</p><div class="progress-line" style="margin-top:20px"><span>Device assessment</span><span>Awaiting native hardware scan</span></div></div>
 </section>
 
-<!-- CREATE -->
 <section class="page" id="create">
-  <div class="page-heading">
-    <div><div class="eyebrow">AI VIDEO GENERATION</div><h1>Create a new clip</h1>
-    <p class="subtitle">Describe a scene or provide an image to begin creating.</p></div>
-  </div>
-
-  <div class="mode-switch">
-    <button class="active" id="textMode" onclick="setMode('text')">✳ Text to video</button>
-    <button id="imageMode" onclick="setMode('image')">▧ Image to video</button>
-  </div>
-
+  <div class="page-heading"><div><div class="eyebrow">AI VIDEO GENERATION</div><h1>Create a new clip</h1><p class="subtitle">Describe a scene or provide an image to begin creating.</p></div></div>
+  <div class="mode-switch"><button class="active" id="textMode" onclick="setMode('text')">✳ Text to video</button><button id="imageMode" onclick="setMode('image')">▧ Image to video</button></div>
   <div class="grid create-layout">
     <div class="card">
       <div class="field" id="uploadField" style="display:none">
         <label>Starting image</label>
-        <label class="upload-box" for="imageUpload">
-          <div style="font-size:25px">＋</div>
-          <strong>Choose an image</strong>
-          <span>PNG, JPG or WebP</span>
-        </label>
+        <label class="upload-box" for="imageUpload"><div style="font-size:25px">＋</div><strong>Choose an image</strong><span>PNG, JPG or WebP</span></label>
         <input type="file" id="imageUpload" accept="image/*" hidden onchange="previewImage(event)">
         <div id="imageName" class="hint"></div>
+        <img id="imagePreview" class="upload-preview" hidden alt="Selected image preview">
       </div>
-
-      <div class="field">
-        <label>Scene description</label>
-        <textarea id="prompt" placeholder="A lone traveller walks through an abandoned city at sunrise. Dust moves gently through the air as the camera slowly follows from behind. Cinematic lighting, realistic textures..."></textarea>
-        <div class="hint">Describe the subject, environment, movement, lighting and camera behaviour.</div>
-      </div>
-
-      <div class="field">
-        <label>Negative prompt</label>
-        <input placeholder="Blur, distorted objects, extra limbs, flickering...">
-        <div class="hint">Optional instructions describing what to avoid.</div>
-      </div>
-
+      <div class="field"><label>Scene description</label><textarea id="prompt" placeholder="A lone traveller walks through an abandoned city at sunrise. Dust moves gently through the air as the camera slowly follows from behind. Cinematic lighting, realistic textures..."></textarea><div class="hint">Describe the subject, environment, movement, lighting and camera behaviour.</div></div>
+      <div class="field"><label>Negative prompt</label><input placeholder="Blur, distorted objects, extra limbs, flickering..."><div class="hint">Optional instructions describing what to avoid.</div></div>
       <div class="grid two-col">
-        <div class="field">
-          <label>Clip duration</label>
-          <select id="duration"><option>3 seconds</option><option selected>5 seconds</option><option>6 seconds</option><option>8 seconds</option><option>10 seconds</option></select>
-        </div>
-        <div class="field">
-          <label>Aspect ratio</label>
-          <select><option>16:9 Landscape</option><option>9:16 Portrait</option><option>1:1 Square</option><option>4:3 Standard</option></select>
-        </div>
+        <div class="field"><label>Clip duration</label><select id="duration"><option>3 seconds</option><option selected>5 seconds</option><option>6 seconds</option><option>8 seconds</option><option>10 seconds</option></select></div>
+        <div class="field"><label>Aspect ratio</label><select><option>16:9 Landscape</option><option>9:16 Portrait</option><option>1:1 Square</option><option>4:3 Standard</option></select></div>
       </div>
-
-      <div class="field">
-        <label>Visual style</label>
-        <div class="choice-row">
-          <button class="choice active" onclick="choose(this)">Realistic</button>
-          <button class="choice" onclick="choose(this)">Cinematic</button>
-          <button class="choice" onclick="choose(this)">Documentary</button>
-          <button class="choice" onclick="choose(this)">Animation</button>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Camera movement</label>
-        <div class="choice-row">
-          <button class="choice active" onclick="choose(this)">Automatic</button>
-          <button class="choice" onclick="choose(this)">Static</button>
-          <button class="choice" onclick="choose(this)">Pan</button>
-          <button class="choice" onclick="choose(this)">Tracking</button>
-          <button class="choice" onclick="choose(this)">Zoom</button>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Generation quality</label>
-        <div class="choice-row">
-          <button class="choice active" onclick="choose(this)">Adaptive</button>
-          <button class="choice" onclick="choose(this)">Draft</button>
-          <button class="choice" onclick="choose(this)">Standard</button>
-        </div>
-        <div class="hint">Available quality depends on the selected model and device.</div>
-      </div>
-
+      <div class="field"><label>Visual style</label><div class="choice-row"><button class="choice active" onclick="choose(this)">Realistic</button><button class="choice" onclick="choose(this)">Cinematic</button><button class="choice" onclick="choose(this)">Documentary</button><button class="choice" onclick="choose(this)">Animation</button></div></div>
+      <div class="field"><label>Camera movement</label><div class="choice-row"><button class="choice active" onclick="choose(this)">Automatic</button><button class="choice" onclick="choose(this)">Static</button><button class="choice" onclick="choose(this)">Pan</button><button class="choice" onclick="choose(this)">Tracking</button><button class="choice" onclick="choose(this)">Zoom</button></div></div>
+      <div class="field"><label>Generation quality</label><div class="choice-row"><button class="choice active" onclick="choose(this)">Adaptive</button><button class="choice" onclick="choose(this)">Draft</button><button class="choice" onclick="choose(this)">Standard</button></div><div class="hint">Available quality depends on the selected model and device.</div></div>
       <button class="btn primary" style="width:100%;padding:14px" onclick="startGeneration()">Generate video clip →</button>
     </div>
-
     <div>
-      <div class="preview-box" id="createPreview">
-        <div class="preview-symbol">▧</div>
-        <h3>Generation preview</h3>
-        <p>Your generated clip will appear here.<br>Generation runs locally when supported models are installed.</p>
-      </div>
-      <div class="card" style="margin-top:15px">
-        <div class="eyebrow">ACTIVE CONFIGURATION</div>
-        <div class="setting-row"><div><strong>Model</strong><span>Automatic selection</span></div></div>
-        <div class="setting-row"><div><strong>Processing</strong><span>On-device</span></div></div>
-        <div class="setting-row"><div><strong>Output</strong><span>MP4 video</span></div></div>
-        <div class="setting-row"><div><strong>Network</strong><span>Not required for local inference</span></div></div>
-      </div>
+      <div class="preview-box" id="createPreview"><div class="preview-symbol">▧</div><h3>Generation preview</h3><p>Your generated clip will appear here. Generation runs locally when supported models are installed.</p></div>
+      <div class="card" style="margin-top:15px"><div class="eyebrow">ACTIVE CONFIGURATION</div><div class="setting-row"><div><strong>Model</strong><span>Automatic selection</span></div></div><div class="setting-row"><div><strong>Processing</strong><span>On-device</span></div></div><div class="setting-row"><div><strong>Output</strong><span>MP4 video</span></div></div><div class="setting-row"><div><strong>Network</strong><span>Not required for local inference</span></div></div></div>
     </div>
   </div>
 </section>
 
-<!-- GENERATION -->
 <section class="page" id="generation">
-  <div class="page-heading">
-    <div><div class="eyebrow">GENERATION WORKSPACE</div><h1>Creating your clip</h1>
-    <p class="subtitle">Monitor the generation process and resource usage.</p></div>
-    <span class="tag">DEMO INTERFACE</span>
-  </div>
+  <div class="page-heading"><div><div class="eyebrow">GENERATION WORKSPACE</div><h1>Creating your clip</h1><p class="subtitle">Monitor the generation process and resource usage.</p></div><span class="tag">DEMO INTERFACE</span></div>
   <div class="grid two-col">
     <div class="card">
-      <div class="preview-box" style="min-height:270px">
-        <div class="preview-symbol">◌</div>
-        <h2 id="generationStatus">Preparing generation</h2>
-        <p id="generationMessage">Loading the selected generation pipeline.</p>
-      </div>
-      <div style="margin-top:20px">
-        <div class="progress-line"><span>Generation progress</span><strong id="progressText">0%</strong></div>
-        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-        <div class="progress-line"><span id="progressStage">Waiting</span><span id="progressTime">--:--</span></div>
-      </div>
-      <button class="btn danger" style="margin-top:20px" onclick="toast('Demo generation cancelled')">Cancel generation</button>
+      <div class="preview-box" style="min-height:270px"><div class="preview-symbol">◌</div><h2 id="generationStatus">Preparing generation</h2><p id="generationMessage">Loading the selected generation pipeline.</p></div>
+      <div style="margin-top:20px"><div class="progress-line"><span>Generation progress</span><strong id="progressText">0%</strong></div><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div><div class="progress-line"><span id="progressStage">Waiting</span><span id="progressTime">--:--</span></div></div>
+      <button class="btn danger" style="margin-top:20px" onclick="cancelGeneration()">Cancel generation</button>
     </div>
-    <div class="card">
-      <h2>Resource monitor</h2>
-      <div class="setting-row"><div><strong>Memory usage</strong><span>Native monitoring required</span></div><span>--</span></div>
-      <div class="setting-row"><div><strong>CPU usage</strong><span>Native monitoring required</span></div><span>--</span></div>
-      <div class="setting-row"><div><strong>GPU usage</strong><span>Where supported</span></div><span>--</span></div>
-      <div class="setting-row"><div><strong>Temperature</strong><span>Device-dependent</span></div><span>--</span></div>
-      <div class="setting-row"><div><strong>Model</strong><span>Selected model profile</span></div></div>
-      <p class="hint" style="margin-top:15px">This HTML prototype simulates the interface. It does not run AI inference.</p>
-    </div>
+    <div class="card"><h2>Resource monitor</h2><div class="setting-row"><div><strong>Memory usage</strong><span>Native monitoring required</span></div><span>--</span></div><div class="setting-row"><div><strong>CPU usage</strong><span>Native monitoring required</span></div><span>--</span></div><div class="setting-row"><div><strong>GPU usage</strong><span>Where supported</span></div><span>--</span></div><div class="setting-row"><div><strong>Temperature</strong><span>Device-dependent</span></div><span>--</span></div><div class="setting-row"><div><strong>Model</strong><span>Selected model profile</span></div></div><p class="hint" style="margin-top:15px">This HTML prototype simulates the interface. It does not run AI inference.</p></div>
   </div>
 </section>
 
-<!-- CLIP DETAILS -->
 <section class="page" id="clip">
-  <div class="page-heading">
-    <div><div class="eyebrow">CLIP LIBRARY</div><h1>Clip details</h1><p class="subtitle">Review and manage your generated footage.</p></div>
-    <button class="btn" onclick="go('projects')">Back to projects</button>
-  </div>
+  <div class="page-heading"><div><div class="eyebrow">CLIP LIBRARY</div><h1>Clip details</h1><p class="subtitle">Review and manage your generated footage.</p></div><button class="btn" onclick="go('projects')">Back to projects</button></div>
   <div class="grid two-col">
-    <div class="preview-box">
-      <div class="preview-symbol">▶</div>
-      <h2>Generated clip</h2>
-      <p>Video preview will be displayed here.</p>
-    </div>
-    <div class="card">
-      <h2>Clip information</h2>
-      <div class="setting-row"><div><strong>Filename</strong><span>generated_clip_001.mp4</span></div></div>
-      <div class="setting-row"><div><strong>Duration</strong><span>5 seconds</span></div></div>
-      <div class="setting-row"><div><strong>Format</strong><span>MP4</span></div></div>
-      <div class="setting-row"><div><strong>Resolution</strong><span>Adaptive</span></div></div>
-      <div class="setting-row"><div><strong>Storage</strong><span>Local device</span></div></div>
-      <div class="grid two-col" style="margin-top:20px">
-        <button class="btn primary" onclick="toast('Add clip to project')">Add to project</button>
-        <button class="btn" onclick="toast('Export requested')">Export clip</button>
-      </div>
-    </div>
+    <div class="preview-box"><div class="preview-symbol">▶</div><h2>Generated clip</h2><p>Video preview will be displayed here.</p></div>
+    <div class="card"><h2>Clip information</h2><div class="setting-row"><div><strong>Filename</strong><span>generated_clip_001.mp4</span></div></div><div class="setting-row"><div><strong>Duration</strong><span id="clipDuration">5 seconds</span></div></div><div class="setting-row"><div><strong>Format</strong><span>MP4</span></div></div><div class="setting-row"><div><strong>Resolution</strong><span>Adaptive</span></div></div><div class="setting-row"><div><strong>Storage</strong><span>Local device</span></div></div><div class="grid two-col" style="margin-top:20px"><button class="btn primary" onclick="toast('Add clip to project')">Add to project</button><button class="btn" onclick="toast('Export requested')">Export clip</button></div></div>
   </div>
 </section>
 
-<!-- PROJECTS -->
 <section class="page" id="projects">
-  <div class="page-heading">
-    <div><div class="eyebrow">YOUR LIBRARY</div><h1>Projects</h1><p class="subtitle">All your films, scenes and creative work in one place.</p></div>
-    <button class="btn primary" onclick="newProject()">＋ New project</button>
-  </div>
+  <div class="page-heading"><div><div class="eyebrow">YOUR LIBRARY</div><h1>Projects</h1><p class="subtitle">All your films, scenes and creative work in one place.</p></div><button class="btn primary" onclick="newProject()">＋ New project</button></div>
   <div class="grid project-grid" id="projectGrid">
-    <div class="card" onclick="go('film')" style="cursor:pointer">
-      <div class="project-thumb thumb-one"><div class="landscape"></div><div class="thumb-center">THE LAST JOURNEY</div></div>
-      <h3>The Last Journey</h3><div class="project-meta"><span>6 scenes · 12 clips</span><span>Today</span></div>
-    </div>
-    <div class="card" onclick="go('film')" style="cursor:pointer">
-      <div class="project-thumb thumb-two"><div class="landscape"></div><div class="thumb-center">AFTER THE STORM</div></div>
-      <h3>After the Storm</h3><div class="project-meta"><span>4 scenes · 8 clips</span><span>Yesterday</span></div>
-    </div>
-    <div class="card" onclick="go('film')" style="cursor:pointer">
-      <div class="project-thumb thumb-three"><div class="landscape"></div><div class="thumb-center">BLUE HORIZON</div></div>
-      <h3>Blue Horizon</h3><div class="project-meta"><span>8 scenes · 16 clips</span><span>3 days ago</span></div>
-    </div>
+    <div class="card" onclick="go('film')" style="cursor:pointer"><div class="project-thumb thumb-one"><div class="landscape"></div><div class="thumb-center">THE LAST JOURNEY</div></div><h3>The Last Journey</h3><div class="project-meta"><span>6 scenes · 12 clips</span><span>Today</span></div></div>
+    <div class="card" onclick="go('film')" style="cursor:pointer"><div class="project-thumb thumb-two"><div class="landscape"></div><div class="thumb-center">AFTER THE STORM</div></div><h3>After the Storm</h3><div class="project-meta"><span>4 scenes · 8 clips</span><span>Yesterday</span></div></div>
+    <div class="card" onclick="go('film')" style="cursor:pointer"><div class="project-thumb thumb-three"><div class="landscape"></div><div class="thumb-center">BLUE HORIZON</div></div><h3>Blue Horizon</h3><div class="project-meta"><span>8 scenes · 16 clips</span><span>3 days ago</span></div></div>
   </div>
 </section>
 
-<!-- FILM WORKSPACE -->
 <section class="page" id="film">
-  <div class="page-heading">
-    <div><div class="eyebrow">FILM WORKSPACE</div><h1>The Last Journey</h1><p class="subtitle">Organise generated clips into a complete film.</p></div>
-    <button class="btn primary" onclick="go('editor')">Open editor →</button>
-  </div>
+  <div class="page-heading"><div><div class="eyebrow">FILM WORKSPACE</div><h1 id="filmTitle">The Last Journey</h1><p class="subtitle">Organise generated clips into a complete film.</p></div><button class="btn primary" onclick="go('editor')">Open editor →</button></div>
   <div class="grid two-col">
-    <div class="card">
-      <h2>Film overview</h2>
-      <div class="preview-box" style="min-height:200px;margin-top:15px">
-        <div class="preview-symbol">▶</div><h3>The Last Journey</h3><p>Film preview</p>
-      </div>
-      <div class="grid three-col" style="margin-top:15px">
-        <div><div class="stat-label">Scenes</div><h2 style="margin-top:7px">06</h2></div>
-        <div><div class="stat-label">Clips</div><h2 style="margin-top:7px">12</h2></div>
-        <div><div class="stat-label">Duration</div><h2 style="margin-top:7px">01:24</h2></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="section-head" style="margin-top:0"><div><h2>Scene sequence</h2><p>Arrange your story.</p></div><button class="btn small" onclick="addScene()">＋ Scene</button></div>
-      <div class="scene-list" id="sceneList">
-        <div class="scene"><div class="scene-number">01</div><div class="scene-info"><strong>Opening sequence</strong><span>2 clips · 12 seconds</span></div><span class="tag">Ready</span></div>
-        <div class="scene"><div class="scene-number">02</div><div class="scene-info"><strong>The journey begins</strong><span>3 clips · 18 seconds</span></div><span class="tag">Ready</span></div>
-        <div class="scene"><div class="scene-number">03</div><div class="scene-info"><strong>Into the unknown</strong><span>2 clips · 15 seconds</span></div><span class="tag">Ready</span></div>
-        <div class="scene"><div class="scene-number">04</div><div class="scene-info"><strong>The turning point</strong><span>3 clips · 20 seconds</span></div><span class="tag">Ready</span></div>
-      </div>
-    </div>
+    <div class="card"><h2>Film overview</h2><div class="preview-box" style="min-height:200px;margin-top:15px"><div class="preview-symbol">▶</div><h3 id="filmPreviewTitle">The Last Journey</h3><p>Film preview</p></div><div class="grid three-col" style="margin-top:15px"><div><div class="stat-label">Scenes</div><h2 style="margin-top:7px" id="sceneCount">06</h2></div><div><div class="stat-label">Clips</div><h2 style="margin-top:7px">12</h2></div><div><div class="stat-label">Duration</div><h2 style="margin-top:7px">01:24</h2></div></div></div>
+    <div class="card"><div class="section-head" style="margin-top:0"><div><h2>Scene sequence</h2><p>Arrange your story.</p></div><button class="btn small" onclick="addScene()">＋ Scene</button></div><div class="scene-list" id="sceneList"><div class="scene"><div class="scene-number">01</div><div class="scene-info"><strong>Opening sequence</strong><span>2 clips · 12 seconds</span></div><span class="tag">Ready</span></div><div class="scene"><div class="scene-number">02</div><div class="scene-info"><strong>The journey begins</strong><span>3 clips · 18 seconds</span></div><span class="tag">Ready</span></div><div class="scene"><div class="scene-number">03</div><div class="scene-info"><strong>Into the unknown</strong><span>2 clips · 15 seconds</span></div><span class="tag">Ready</span></div><div class="scene"><div class="scene-number">04</div><div class="scene-info"><strong>The turning point</strong><span>3 clips · 20 seconds</span></div><span class="tag">Ready</span></div></div></div>
   </div>
-  <div class="card" style="margin-top:17px">
-    <h2>Film notes</h2>
-    <p class="subtitle">Keep your storyline, production notes and scene direction here.</p>
-    <textarea style="width:100%;margin-top:13px;background:#111511;color:white;border:1px solid var(--border);border-radius:8px;padding:12px;min-height:90px" placeholder="Write your film notes..."></textarea>
-  </div>
+  <div class="card" style="margin-top:17px"><h2>Film notes</h2><p class="subtitle">Keep your storyline, production notes and scene direction here.</p><textarea style="width:100%;margin-top:13px;background:#121417;color:white;border:1px solid var(--border);border-radius:6px;padding:12px;min-height:90px" placeholder="Write your film notes..."></textarea></div>
 </section>
 
-<!-- EDITOR -->
 <section class="page" id="editor">
-  <div class="page-heading">
-    <div><div class="eyebrow">POST-PRODUCTION</div><h1>Video editor</h1><p class="subtitle">Arrange clips, audio and titles into a final sequence.</p></div>
-    <button class="btn primary" onclick="go('export')">Export film →</button>
-  </div>
+  <div class="page-heading"><div><div class="eyebrow">POST-PRODUCTION</div><h1>Video editor</h1><p class="subtitle">Arrange clips, audio and titles into a final sequence.</p></div><button class="btn primary" onclick="go('export')">Export film →</button></div>
   <div class="grid two-col">
-    <div class="preview-box" style="min-height:280px">
-      <div class="preview-symbol">▶</div>
-      <h3>Film preview monitor</h3>
-      <p>Your timeline playback will appear here.</p>
-      <div style="display:flex;gap:9px;margin-top:20px">
-        <button class="btn small" onclick="toast('Playback preview is a prototype')">▶ Play</button>
-        <button class="btn small" onclick="toast('Preview paused')">Ⅱ Pause</button>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Editing tools</h2>
-      <div class="grid two-col" style="margin-top:17px">
-        <button class="btn" onclick="toast('Trim tool selected')">✂ Trim clip</button>
-        <button class="btn" onclick="toast('Split tool selected')">Split</button>
-        <button class="btn" onclick="toast('Transition settings opened')">Transitions</button>
-        <button class="btn" onclick="toast('Text tool selected')">Add text</button>
-        <button class="btn" onclick="toast('Audio tool selected')">Add audio</button>
-        <button class="btn" onclick="toast('Colour settings opened')">Colour</button>
-      </div>
-      <div class="setting-row" style="margin-top:15px"><div><strong>Project frame rate</strong><span>24 FPS</span></div></div>
-      <div class="setting-row"><div><strong>Canvas ratio</strong><span>16:9</span></div></div>
-    </div>
+    <div class="preview-box" style="min-height:280px"><div class="preview-symbol">▶</div><h3>Film preview monitor</h3><p>Your timeline playback will appear here.</p><div style="display:flex;gap:9px;margin-top:20px"><button class="btn small" onclick="toast('Playback preview is a prototype')">▶ Play</button><button class="btn small" onclick="toast('Preview paused')">Ⅱ Pause</button></div></div>
+    <div class="card"><h2>Editing tools</h2><div class="grid two-col" style="margin-top:17px"><button class="btn" onclick="toast('Trim tool selected')">✂ Trim clip</button><button class="btn" onclick="toast('Split tool selected')">Split</button><button class="btn" onclick="toast('Transition settings opened')">Transitions</button><button class="btn" onclick="toast('Text tool selected')">Add text</button><button class="btn" onclick="toast('Audio tool selected')">Add audio</button><button class="btn" onclick="toast('Colour settings opened')">Colour</button></div><div class="setting-row" style="margin-top:15px"><div><strong>Project frame rate</strong><span>24 FPS</span></div></div><div class="setting-row"><div><strong>Canvas ratio</strong><span>16:9</span></div></div></div>
   </div>
-
   <div class="section-head"><div><h2>Timeline</h2><p>Arrange your film sequence.</p></div><button class="btn small" onclick="toast('Clip import requested')">＋ Add media</button></div>
-  <div class="timeline">
-    <div class="time-ruler"><span>00:00</span><span>00:05</span><span>00:10</span><span>00:15</span><span>00:20</span><span>00:25</span></div>
-    <div class="track"><div class="track-label">VIDEO 01</div><div class="track-content"><div class="clip-block">Opening shot</div><div class="clip-block">Journey</div><div class="clip-block">Landscape</div><div class="clip-block">Final scene</div></div></div>
-    <div class="track"><div class="track-label">VIDEO 02</div><div class="track-content"><div class="clip-block textclip">Title</div><div class="clip-block textclip">Scene text</div></div></div>
-    <div class="track"><div class="track-label">AUDIO</div><div class="track-content"><div class="clip-block audio">Background score</div></div></div>
-  </div>
+  <div class="timeline"><div class="time-ruler"><span>00:00</span><span>00:05</span><span>00:10</span><span>00:15</span><span>00:20</span><span>00:25</span></div><div class="track"><div class="track-label">VIDEO 01</div><div class="track-content"><div class="clip-block">Opening shot</div><div class="clip-block">Journey</div><div class="clip-block">Landscape</div><div class="clip-block">Final scene</div></div></div><div class="track"><div class="track-label">VIDEO 02</div><div class="track-content"><div class="clip-block textclip">Title</div><div class="clip-block textclip">Scene text</div></div></div><div class="track"><div class="track-label">AUDIO</div><div class="track-content"><div class="clip-block audio">Background score</div></div></div></div>
   <p class="hint" style="margin-top:10px">Timeline interactions and rendering will be implemented in the native editing engine.</p>
 </section>
 
-<!-- EXPORT -->
 <section class="page" id="export">
-  <div class="page-heading">
-    <div><div class="eyebrow">FINAL DELIVERY</div><h1>Export studio</h1><p class="subtitle">Configure the output settings for your finished film.</p></div>
-  </div>
+  <div class="page-heading"><div><div class="eyebrow">FINAL DELIVERY</div><h1>Export studio</h1><p class="subtitle">Configure the output settings for your finished film.</p></div></div>
   <div class="grid two-col">
-    <div class="card">
-      <h2>Export configuration</h2>
-      <div class="field" style="margin-top:20px">
-        <label>Resolution</label>
-        <select><option>720p · HD</option><option>1080p · Full HD</option><option>480p · Standard</option><option>Original resolution</option></select>
-      </div>
-      <div class="field">
-        <label>Frame rate</label>
-        <select><option>24 FPS</option><option>30 FPS</option><option>60 FPS</option></select>
-      </div>
-      <div class="field">
-        <label>Video format</label>
-        <select><option>MP4 · H.264</option><option>MP4 · H.265 / HEVC</option></select>
-      </div>
-      <div class="field">
-        <label>Quality</label>
-        <select><option>Standard</option><option>High</option><option>Maximum</option></select>
-      </div>
-      <div class="field">
-        <label>File name</label>
-        <input value="the-last-journey.mp4">
-      </div>
-      <button class="btn primary" style="width:100%;padding:13px" onclick="toast('Export simulation started')">Start export →</button>
-    </div>
-    <div class="card">
-      <h2>Export summary</h2>
-      <div class="preview-box" style="min-height:190px;margin-top:15px">
-        <div class="preview-symbol">▤</div><h3>Final film</h3><p>Your completed project.</p>
-      </div>
-      <div class="setting-row"><div><strong>Estimated duration</strong><span>01 minute 24 seconds</span></div></div>
-      <div class="setting-row"><div><strong>Destination</strong><span>Device storage</span></div></div>
-      <div class="setting-row"><div><strong>Estimated file size</strong><span>Calculated during export</span></div></div>
-      <div class="setting-row"><div><strong>Processing</strong><span>Local device encoder</span></div></div>
-    </div>
+    <div class="card"><h2>Export configuration</h2><div class="field" style="margin-top:20px"><label>Resolution</label><select><option>720p · HD</option><option>1080p · Full HD</option><option>480p · Standard</option><option>Original resolution</option></select></div><div class="field"><label>Frame rate</label><select><option>24 FPS</option><option>30 FPS</option><option>60 FPS</option></select></div><div class="field"><label>Video format</label><select><option>MP4 · H.264</option><option>MP4 · H.265 / HEVC</option></select></div><div class="field"><label>Quality</label><select><option>Standard</option><option>High</option><option>Maximum</option></select></div><div class="field"><label>File name</label><input id="exportFilename" value="the-last-journey.mp4"></div><button class="btn primary" style="width:100%;padding:13px" onclick="toast('Export simulation started')">Start export →</button></div>
+    <div class="card"><h2>Export summary</h2><div class="preview-box" style="min-height:190px;margin-top:15px"><div class="preview-symbol">▤</div><h3>Final film</h3><p>Your completed project.</p></div><div class="setting-row"><div><strong>Estimated duration</strong><span>01 minute 24 seconds</span></div></div><div class="setting-row"><div><strong>Destination</strong><span>Device storage</span></div></div><div class="setting-row"><div><strong>Estimated file size</strong><span>Calculated during export</span></div></div><div class="setting-row"><div><strong>Processing</strong><span>Local device encoder</span></div></div></div>
   </div>
 </section>
 
-<!-- MODELS -->
 <section class="page" id="models">
-  <div class="page-heading">
-    <div><div class="eyebrow">MODEL MANAGEMENT</div><h1>AI models</h1><p class="subtitle">Manage the models used for local video generation.</p></div>
-    <button class="btn" onclick="toast('Model repository opened')">Explore models</button>
-  </div>
-  <div class="card">
-    <div class="eyebrow">INSTALLED MODELS</div>
-    <div class="model-row">
-      <div class="model-icon">◈</div>
-      <div class="model-details"><strong>Image-to-video model</strong><span>Local model · Model details pending integration</span></div>
-      <span class="tag">Installed</span>
-      <button class="btn small" onclick="toast('Model details opened')">Details</button>
-    </div>
-    <div class="model-row">
-      <div class="model-icon">✳</div>
-      <div class="model-details"><strong>Text encoder</strong><span>Supporting component · Local storage</span></div>
-      <span class="tag">Installed</span>
-      <button class="btn small" onclick="toast('Model details opened')">Details</button>
-    </div>
-  </div>
+  <div class="page-heading"><div><div class="eyebrow">MODEL MANAGEMENT</div><h1>AI models</h1><p class="subtitle">Manage the models used for local video generation.</p></div><button class="btn" onclick="toast('Model repository opened')">Explore models</button></div>
+  <div class="card"><div class="eyebrow">INSTALLED MODELS</div><div class="model-row"><div class="model-icon">◈</div><div class="model-details"><strong>Image-to-video model</strong><span>Local model · Model details pending integration</span></div><span class="tag">Installed</span><button class="btn small" onclick="toast('Model details opened')">Details</button></div><div class="model-row"><div class="model-icon">✳</div><div class="model-details"><strong>Text encoder</strong><span>Supporting component · Local storage</span></div><span class="tag">Installed</span><button class="btn small" onclick="toast('Model details opened')">Details</button></div></div>
   <div class="section-head"><div><h2>Available model packages</h2><p>Model compatibility must be tested on the target hardware.</p></div></div>
   <div class="grid three-col">
-    <div class="card">
-      <div class="model-icon">◈</div>
-      <h3 style="margin-top:14px">Compact video model</h3>
-      <p class="subtitle">Designed for smaller memory budgets. Actual performance varies by device.</p>
-      <div class="project-meta"><span>Small profile</span><span>Experimental</span></div>
-      <button class="btn" style="margin-top:15px;width:100%" onclick="toast('Model package details')">View package</button>
-    </div>
-    <div class="card">
-      <div class="model-icon">✳</div>
-      <h3 style="margin-top:14px">Standard video model</h3>
-      <p class="subtitle">A larger generation profile for devices with more resources.</p>
-      <div class="project-meta"><span>Standard profile</span><span>Experimental</span></div>
-      <button class="btn" style="margin-top:15px;width:100%" onclick="toast('Model package details')">View package</button>
-    </div>
-    <div class="card">
-      <div class="model-icon">◇</div>
-      <h3 style="margin-top:14px">High quality model</h3>
-      <p class="subtitle">For devices with higher memory and compute capability.</p>
-      <div class="project-meta"><span>Large profile</span><span>Experimental</span></div>
-      <button class="btn" style="margin-top:15px;width:100%" onclick="toast('Model package details')">View package</button>
-    </div>
+    <div class="card"><div class="model-icon">◈</div><h3 style="margin-top:14px">Compact video model</h3><p class="subtitle">Designed for smaller memory budgets. Actual performance varies by device.</p><div class="project-meta"><span>Small profile</span><span>Experimental</span></div><button class="btn" style="margin-top:15px;width:100%" onclick="toast('Model package details')">View package</button></div>
+    <div class="card"><div class="model-icon">✳</div><h3 style="margin-top:14px">Standard video model</h3><p class="subtitle">A larger generation profile for devices with more resources.</p><div class="project-meta"><span>Standard profile</span><span>Experimental</span></div><button class="btn" style="margin-top:15px;width:100%" onclick="toast('Model package details')">View package</button></div>
+    <div class="card"><div class="model-icon">◇</div><h3 style="margin-top:14px">High quality model</h3><p class="subtitle">For devices with higher memory and compute capability.</p><div class="project-meta"><span>Large profile</span><span>Experimental</span></div><button class="btn" style="margin-top:15px;width:100%" onclick="toast('Model package details')">View package</button></div>
   </div>
 </section>
 
-<!-- SETTINGS -->
 <section class="page" id="settings">
-  <div class="page-heading">
-    <div><div class="eyebrow">APPLICATION PREFERENCES</div><h1>Settings</h1><p class="subtitle">Configure FRAME's behaviour and local resources.</p></div>
-  </div>
+  <div class="page-heading"><div><div class="eyebrow">APPLICATION PREFERENCES</div><h1>Settings</h1><p class="subtitle">Configure FRAME's behaviour and local resources.</p></div></div>
   <div class="grid two-col">
-    <div class="card">
-      <h2>Generation preferences</h2>
-      <div class="setting-row"><div><strong>Adaptive memory management</strong><span>Adjust workload to available memory.</span></div><button class="toggle on" onclick="toggle(this)"></button></div>
-      <div class="setting-row"><div><strong>Automatic model unloading</strong><span>Release model resources when idle.</span></div><button class="toggle on" onclick="toggle(this)"></button></div>
-      <div class="setting-row"><div><strong>Thermal protection</strong><span>Reduce workload when device heats up.</span></div><button class="toggle on" onclick="toggle(this)"></button></div>
-      <div class="setting-row"><div><strong>Battery-aware processing</strong><span>Adjust generation when battery is low.</span></div><button class="toggle on" onclick="toggle(this)"></button></div>
-    </div>
-    <div class="card">
-      <h2>Storage and files</h2>
-      <div class="setting-row"><div><strong>Project storage</strong><span>Internal device storage</span></div></div>
-      <div class="setting-row"><div><strong>Temporary files</strong><span>Automatically cleaned when safe.</span></div></div>
-      <div class="setting-row"><div><strong>Model storage</strong><span>Dedicated local model directory</span></div></div>
-      <button class="btn" style="margin-top:17px" onclick="toast('Storage manager opened')">Manage storage</button>
-    </div>
-    <div class="card">
-      <h2>Appearance</h2>
-      <div class="setting-row"><div><strong>Theme</strong><span>Dark studio</span></div><span class="tag">Active</span></div>
-      <div class="setting-row"><div><strong>Animations</strong><span>Interface transitions</span></div><button class="toggle on" onclick="toggle(this)"></button></div>
-      <div class="setting-row"><div><strong>Compact layout</strong><span>Reduce spacing in the workspace.</span></div><button class="toggle" onclick="toggle(this)"></button></div>
-    </div>
-    <div class="card">
-      <h2>About FRAME</h2>
-      <div class="setting-row"><div><strong>Application</strong><span>FRAME Offline Film Studio</span></div></div>
-      <div class="setting-row"><div><strong>Version</strong><span>Prototype 0.1.0</span></div></div>
-      <div class="setting-row"><div><strong>Platform</strong><span>Android-first</span></div></div>
-      <div class="setting-row"><div><strong>Processing philosophy</strong><span>Local-first AI</span></div></div>
-    </div>
+    <div class="card"><h2>Generation preferences</h2><div class="setting-row"><div><strong>Adaptive memory management</strong><span>Adjust workload to available memory.</span></div><button class="toggle on" onclick="toggle(this)" aria-label="Toggle adaptive memory management"></button></div><div class="setting-row"><div><strong>Automatic model unloading</strong><span>Release model resources when idle.</span></div><button class="toggle on" onclick="toggle(this)" aria-label="Toggle automatic model unloading"></button></div><div class="setting-row"><div><strong>Thermal protection</strong><span>Reduce workload when device heats up.</span></div><button class="toggle on" onclick="toggle(this)" aria-label="Toggle thermal protection"></button></div><div class="setting-row"><div><strong>Battery-aware processing</strong><span>Adjust generation when battery is low.</span></div><button class="toggle on" onclick="toggle(this)" aria-label="Toggle battery-aware processing"></button></div></div>
+    <div class="card"><h2>Storage and files</h2><div class="setting-row"><div><strong>Project storage</strong><span>Internal device storage</span></div></div><div class="setting-row"><div><strong>Temporary files</strong><span>Automatically cleaned when safe.</span></div></div><div class="setting-row"><div><strong>Model storage</strong><span>Dedicated local model directory</span></div></div><button class="btn" style="margin-top:17px" onclick="toast('Storage manager opened')">Manage storage</button></div>
+    <div class="card"><h2>Appearance</h2><div class="setting-row"><div><strong>Theme</strong><span>Dark studio</span></div><span class="tag">Active</span></div><div class="setting-row"><div><strong>Animations</strong><span>Interface transitions</span></div><button class="toggle on" onclick="toggle(this)" aria-label="Toggle animations"></button></div><div class="setting-row"><div><strong>Compact layout</strong><span>Reduce spacing in the workspace.</span></div><button class="toggle" onclick="toggle(this)" aria-label="Toggle compact layout"></button></div></div>
+    <div class="card"><h2>About FRAME</h2><div class="setting-row"><div><strong>Application</strong><span>FRAME Offline Film Studio</span></div></div><div class="setting-row"><div><strong>Version</strong><span>Prototype 0.2.0</span></div></div><div class="setting-row"><div><strong>Platform</strong><span>Android-first</span></div></div><div class="setting-row"><div><strong>Processing philosophy</strong><span>Local-first AI</span></div></div></div>
   </div>
 </section>
 
@@ -1137,7 +458,6 @@ h3{font-size:13px;font-weight:600}
 </main>
 </div>
 
-<!-- MOBILE NAVIGATION -->
 <nav class="mobile-nav">
   <button class="active" data-page="home"><span>⌂</span>Home</button>
   <button data-page="create"><span>✳</span>Create</button>
@@ -1146,15 +466,15 @@ h3{font-size:13px;font-weight:600}
   <button data-page="models"><span>◈</span>Models</button>
 </nav>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
-const pages = [
+const pages=[
   "home","onboarding","hardware","create","generation",
   "clip","projects","film","editor","export","models","settings"
 ];
 
-const pageNames = {
+const pageNames={
   home:"Overview",
   onboarding:"Getting started",
   hardware:"Device profile",
@@ -1169,7 +489,11 @@ const pageNames = {
   settings:"Settings"
 };
 
+let generationTimer=null;
+let generationStarted=0;
+
 function go(page){
+  if(!pages.includes(page))return;
   pages.forEach(id=>{
     document.getElementById(id).classList.toggle("active",id===page);
   });
@@ -1178,7 +502,7 @@ function go(page){
     button.classList.toggle("active",button.dataset.page===page);
   });
 
-  document.getElementById("breadcrumb").textContent=pageNames[page]||page;
+  document.getElementById("breadcrumb").textContent=pageNames[page];
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -1210,28 +534,53 @@ function setMode(mode){
 function previewImage(event){
   const file=event.target.files[0];
   if(!file)return;
+
+  if(!file.type.startsWith("image/")){
+    toast("Please select a valid image.");
+    return;
+  }
+
   document.getElementById("imageName").textContent="Selected: "+file.name;
+  const preview=document.getElementById("imagePreview");
+  preview.src=URL.createObjectURL(file);
+  preview.hidden=false;
 }
 
 function startGeneration(){
-  const prompt=document.getElementById("prompt").value.trim();
-  if(!prompt){
+  const promptText=document.getElementById("prompt").value.trim();
+  if(!promptText){
     toast("Please enter a scene description first.");
     return;
   }
+
+  if(document.getElementById("imageMode").classList.contains("active") &&
+     !document.getElementById("imageUpload").files.length){
+    toast("Please choose a starting image.");
+    return;
+  }
+
+  const duration=document.getElementById("duration").value;
+  document.getElementById("clipDuration").textContent=duration;
 
   go("generation");
   simulateProgress();
 }
 
 function simulateProgress(){
+  cancelGeneration(false);
+
   let progress=0;
+  generationStarted=Date.now();
+
   const fill=document.getElementById("progressFill");
   const text=document.getElementById("progressText");
   const stage=document.getElementById("progressStage");
   const status=document.getElementById("generationStatus");
   const message=document.getElementById("generationMessage");
+  const time=document.getElementById("progressTime");
 
+  fill.style.width="0%";
+  text.textContent="0%";
   status.textContent="Preparing generation";
   message.textContent="This is a demonstration of the generation interface.";
 
@@ -1243,14 +592,18 @@ function simulateProgress(){
     "Preparing video output"
   ];
 
-  const timer=setInterval(()=>{
+  generationTimer=setInterval(()=>{
     progress+=2;
     fill.style.width=progress+"%";
     text.textContent=progress+"%";
     stage.textContent=stages[Math.min(4,Math.floor(progress/21))];
 
+    const elapsed=Math.floor((Date.now()-generationStarted)/1000);
+    time.textContent="00:"+String(elapsed).padStart(2,"0");
+
     if(progress>=100){
-      clearInterval(timer);
+      clearInterval(generationTimer);
+      generationTimer=null;
       status.textContent="Demo completed";
       message.textContent="The interface simulation has finished. No actual AI video was generated.";
       toast("Demo generation completed");
@@ -1259,8 +612,17 @@ function simulateProgress(){
   },100);
 }
 
+function cancelGeneration(showMessage=true){
+  if(generationTimer){
+    clearInterval(generationTimer);
+    generationTimer=null;
+  }
+  if(showMessage)toast("Demo generation cancelled");
+}
+
 function toggle(button){
   button.classList.toggle("on");
+  button.setAttribute("aria-pressed",button.classList.contains("on"));
 }
 
 function newProject(){
@@ -1270,16 +632,26 @@ function newProject(){
   const card=document.createElement("div");
   card.className="card";
   card.style.cursor="pointer";
+
   card.innerHTML=`
     <div class="project-thumb thumb-one">
       <div class="landscape"></div>
       <div class="thumb-center">NEW PROJECT</div>
     </div>
     <h3></h3>
-    <div class="project-meta"><span>0 scenes · 0 clips</span><span>Just now</span></div>
+    <div class="project-meta">
+      <span>0 scenes · 0 clips</span>
+      <span>Just now</span>
+    </div>
   `;
+
   card.querySelector("h3").textContent=name.trim();
-  card.addEventListener("click",()=>go("film"));
+  card.addEventListener("click",()=>{
+    document.getElementById("filmTitle").textContent=name.trim();
+    document.getElementById("filmPreviewTitle").textContent=name.trim();
+    go("film");
+  });
+
   document.getElementById("projectGrid").prepend(card);
   toast("Project created");
 }
@@ -1287,14 +659,21 @@ function newProject(){
 function addScene(){
   const list=document.getElementById("sceneList");
   const number=list.children.length+1;
+
   const scene=document.createElement("div");
   scene.className="scene";
+
   scene.innerHTML=`
     <div class="scene-number">${String(number).padStart(2,"0")}</div>
-    <div class="scene-info"><strong>New scene</strong><span>0 clips · 0 seconds</span></div>
+    <div class="scene-info">
+      <strong>New scene</strong>
+      <span>0 clips · 0 seconds</span>
+    </div>
     <span class="tag">Empty</span>
   `;
+
   list.appendChild(scene);
+  document.getElementById("sceneCount").textContent=String(number).padStart(2,"0");
   toast("New scene added");
 }
 </script>
