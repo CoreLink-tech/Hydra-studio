@@ -7,12 +7,13 @@ package com.corelink.frame.ai.models
  */
 object ModelCatalogue {
 
-    val all: List<ModelMetadata> = listOf(
-        mobileI2V,
-        cineMobile,
-        wan21Light,
-        sdTurboT2i
-    )
+    val all: List<ModelMetadata>
+        get() = listOf(
+            mobileI2V,
+            cineMobile,
+            wan21Light,
+            sdTurboT2i
+        )
 
     fun byId(id: String): ModelMetadata? = all.find { it.id == id }
 
