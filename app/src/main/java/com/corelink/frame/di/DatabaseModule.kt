@@ -3,6 +3,7 @@ package com.corelink.frame.di
 import android.content.Context
 import androidx.room.Room
 import com.corelink.frame.data.local.dao.ClipDao
+import com.corelink.frame.data.local.dao.GenerationTaskDao
 import com.corelink.frame.data.local.dao.ProjectDao
 import com.corelink.frame.data.local.dao.SceneDao
 import com.corelink.frame.data.local.database.FrameDatabase
@@ -25,16 +26,12 @@ object DatabaseModule {
             FrameDatabase::class.java,
             "frame.db"
         )
-            .fallbackToDestructiveMigration() // Milestone 1–3 only; proper migrations later
+            .fallbackToDestructiveMigration()
             .build()
     }
 
-    @Provides
-    fun provideProjectDao(db: FrameDatabase): ProjectDao = db.projectDao()
-
-    @Provides
-    fun provideSceneDao(db: FrameDatabase): SceneDao = db.sceneDao()
-
-    @Provides
-    fun provideClipDao(db: FrameDatabase): ClipDao = db.clipDao()
+    @Provides fun provideProjectDao(db: FrameDatabase): ProjectDao = db.projectDao()
+    @Provides fun provideSceneDao(db: FrameDatabase): SceneDao = db.sceneDao()
+    @Provides fun provideClipDao(db: FrameDatabase): ClipDao = db.clipDao()
+    @Provides fun provideGenerationTaskDao(db: FrameDatabase): GenerationTaskDao = db.generationTaskDao()
 }

@@ -25,6 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.corelink.frame.ui.screens.create.CreateScreen
+import com.corelink.frame.ui.screens.generation.GenerationScreen
 import com.corelink.frame.ui.screens.hardware.HardwareScreen
 import com.corelink.frame.ui.screens.home.HomeScreen
 import com.corelink.frame.ui.screens.models.ModelsScreen
@@ -98,7 +99,16 @@ fun FrameNavHost(
                 )
             }
             composable(FrameDestination.Create.route) {
-                CreateScreen()
+                CreateScreen(
+                    onGenerationStarted = { taskId ->
+                        navController.navigate(FrameDestination.Generation.createRoute(taskId))
+                    }
+                )
+            }
+            composable(FrameDestination.Generation.route) {
+                GenerationScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(FrameDestination.Projects.route) {
                 ProjectsScreen()
