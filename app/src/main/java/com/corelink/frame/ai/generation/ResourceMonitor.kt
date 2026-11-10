@@ -21,6 +21,10 @@ data class ResourceSnapshot(
 /**
  * Lightweight resource checks used by the generation queue.
  * Does not fabricate values; unavailable signals are reported as UNKNOWN.
+ *
+ * Thermal policy (matches docs/QA_AND_RELEASE.md):
+ * - SEVERE and above → shouldPause (block new generation)
+ * - MODERATE → throttle only
  */
 @Singleton
 class ResourceMonitor @Inject constructor(
@@ -32,21 +36,15 @@ class ResourceMonitor @Inject constructor(
         am.getMemoryInfo(mem)
 
         val thermal = readThermal()
-        val shouldPause = thermal == ThermalStatus.CRITICAL ||
-            thermal == ThermalStatus.EMERGENCY ||
-            thermal == ThermalStatus.SHUTDOWN
-        val shouldThrottle = shouldPause ||
-            thermal == ThermalStatus.SEVERE ||
-            thermal == ThermalStatus.MODERATE ||
-            mem.lowMemory
+        val flags = ThermalPolicy.flagsFor(thermal, mem.lowMemory)
 
         return ResourceSnapshot(
             availableRamMb = mem.availMem / (1024 * 1024),
             totalRamMb = mem.totalMem / (1024 * 1024),
             isLowMemory = mem.lowMemory,
             thermalStatus = thermal,
-            shouldThrottle = shouldThrottle,
-            shouldPause = shouldPause
+            shouldThrottle = flags.shouldThrottle,
+            shouldPause = flags.shouldPause
         )
     }
 
@@ -67,5 +65,24 @@ class ResourceMonitor @Inject constructor(
         } catch (_: Exception) {
             ThermalStatus.UNKNOWN
         }
+    }
+}
+
+/** Pure thermal/memory policy — unit-testable without Android services. */
+object ThermalPolicy {
+    data class Flags(val shouldThrottle: Boolean, val shouldPause: Boolean)
+
+    fun flagsFor(thermal: ThermalStatus, isLowMemory: Boolean): Flags {
+        val shouldPause = when (thermal) {
+            ThermalStatus.SEVERE,
+            ThermalStatus.CRITICAL,
+            ThermalStatus.EMERGENCY,
+            ThermalStatus.SHUTDOWN -> true
+            else -> false
+        }
+        val shouldThrottle = shouldPause ||
+            thermal == ThermalStatus.MODERATE ||
+            isLowMemory
+        return Flags(shouldThrottle = shouldThrottle, shouldPause = shouldPause)
     }
 }

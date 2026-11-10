@@ -40,6 +40,7 @@ object ModelCatalogue {
         licenceNotes = "Source: https://github.com/hustvl/MobileI2V. Confirm licence before shipping.",
         sourceUrl = "https://github.com/hustvl/MobileI2V",
         checksumSha256 = null,
+        expectedFiles = listOf("model.onnx"),
         status = ModelStatus.RESEARCH,
         compatibilityNotes = "Community ONNX ports exist. Peak memory on 4 GB devices is unmeasured. Start with low resolution."
     )
@@ -62,6 +63,7 @@ object ModelCatalogue {
         licenceNotes = "Check paper and any released weights for exact terms.",
         sourceUrl = "https://arxiv.org/abs/2607.03803",
         checksumSha256 = null,
+        expectedFiles = listOf("model.onnx"),
         status = ModelStatus.RESEARCH,
         compatibilityNotes = "Reported ~1.8 GB peak on Dimensity 8400. Promising secondary candidate."
     )
@@ -84,6 +86,7 @@ object ModelCatalogue {
         licenceNotes = "Permissive. Still too heavy for 4 GB baseline.",
         sourceUrl = null,
         checksumSha256 = null,
+        expectedFiles = listOf("model.onnx"),
         status = ModelStatus.RESEARCH,
         compatibilityNotes = "Only consider for High-performance profile after validation. Not a PoC target for 4 GB devices."
     )
@@ -106,6 +109,7 @@ object ModelCatalogue {
         licenceNotes = "Placeholder catalogue entry for staged T2V. Replace with a concrete, licence-cleared package after evaluation.",
         sourceUrl = null,
         checksumSha256 = null,
+        expectedFiles = listOf("model.onnx"),
         status = ModelStatus.RESEARCH,
         compatibilityNotes = "Intended only as Stage A of T2V after MobileI2V PoC succeeds. High RAM pressure on 4 GB devices."
     )

@@ -173,8 +173,12 @@ class GenerationQueue @Inject constructor(
         // Resource gate
         val resources = resourceMonitor.snapshot()
         if (resources.shouldPause) {
-            fail(task, FailureReason.INSUFFICIENT_MEMORY,
-                "Device thermal state is too high (${resources.thermalStatus}). Try again when cooler.")
+            fail(
+                task,
+                FailureReason.INSUFFICIENT_MEMORY,
+                "Device thermal state is ${resources.thermalStatus} (SEVERE or higher). " +
+                    "Generation is blocked until the device cools down."
+            )
             return
         }
         if (resources.isLowMemory && resources.availableRamMb < 400) {

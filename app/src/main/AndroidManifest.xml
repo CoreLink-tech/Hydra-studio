@@ -10,21 +10,19 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
-    <!-- Network only for model downloads (optional) -->
+    <!-- Network only for optional model downloads -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Foreground service for long generation -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Notifications for generation progress (no foreground service yet) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Hardware info -->
-    <uses-permission android:name="android.permission.BATTERY_STATS" />
+    <!-- Removed: BATTERY_STATS (not grantable to normal apps) -->
+    <!-- Removed: FOREGROUND_SERVICE / FOREGROUND_SERVICE_DATA_SYNC until a real FGS is implemented -->
 
     <application
         android:name=".FrameApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@drawable/ic_launcher_foreground"

@@ -21,7 +21,13 @@ data class ModelMetadata(
     val licence: String,
     val licenceNotes: String,
     val sourceUrl: String?,
+    /** Optional SHA-256 of the primary package file (hex). */
     val checksumSha256: String?,
+    /**
+     * Relative file names that must exist under FRAME/Models/<id>/ for INSTALLED.
+     * Empty list = legacy size-only heuristic (flagged as unverified in install state).
+     */
+    val expectedFiles: List<String> = emptyList(),
     val status: ModelStatus,
     val compatibilityNotes: String
 )
@@ -39,12 +45,8 @@ enum class ModelRuntime {
 }
 
 enum class ModelStatus {
-    /** Catalogue entry only — weights not yet validated on Android */
     RESEARCH,
-    /** Conversion path exists but not yet measured on target hardware */
     EXPERIMENTAL,
-    /** Measured on device; profile restrictions apply */
     VALIDATED,
-    /** Confirmed incompatible with current runtime / hardware class */
     INCOMPATIBLE
 }

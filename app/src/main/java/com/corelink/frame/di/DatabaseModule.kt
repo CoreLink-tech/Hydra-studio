@@ -2,6 +2,7 @@ package com.corelink.frame.di
 
 import android.content.Context
 import androidx.room.Room
+import com.corelink.frame.BuildConfig
 import com.corelink.frame.data.local.dao.AudioAssetDao
 import com.corelink.frame.data.local.dao.ClipDao
 import com.corelink.frame.data.local.dao.ExportTaskDao
@@ -24,13 +25,17 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): FrameDatabase {
-        return Room.databaseBuilder(
+        val builder = Room.databaseBuilder(
             context,
             FrameDatabase::class.java,
             "frame.db"
         )
-            .fallbackToDestructiveMigration()
-            .build()
+        if (BuildConfig.DEBUG) {
+            // Development only — wipes data on schema change
+            builder.fallbackToDestructiveMigration()
+        }
+        // Release: no destructive fallback — schema mismatch fails loudly
+        return builder.build()
     }
 
     @Provides fun provideProjectDao(db: FrameDatabase): ProjectDao = db.projectDao()

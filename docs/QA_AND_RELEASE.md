@@ -105,3 +105,10 @@ Requires Android SDK / Android Studio on the build machine.
 ---
 
 *FRAME — offline film studio. Measure before claiming.*
+
+
+## Manifest notes (Step 5)
+
+- `BATTERY_STATS` removed (not grantable to normal apps).
+- `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_DATA_SYNC` removed until a real foreground service is implemented for long generation.
+- `allowBackup="false"`; backup/data-extraction rules also exclude `FRAME/Models`, `Cache`, `Projects`, `Logs`.

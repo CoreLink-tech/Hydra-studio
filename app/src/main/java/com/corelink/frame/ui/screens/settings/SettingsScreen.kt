@@ -50,7 +50,7 @@ fun SettingsScreen(
         Section("ABOUT")
         Card {
             Line("App", "FRAME")
-            Line("Version", "0.1.0-milestone11")
+            Line("Version", "0.1.2")
             Line("Mode", "Offline-first")
         }
 

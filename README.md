@@ -2,8 +2,8 @@
 
 **Native Android (Kotlin + Jetpack Compose)** application for offline AI video generation and film production.
 
-> **Status: Milestones 1–11 source-complete** (`0.1.0-milestone11`)  
-> On-device AI generation requires validated model weights (see `docs/POC_CHECKLIST.md`).
+> **Status: Milestones 1–11 source-complete** (`0.1.2`)  
+> App version **0.1.2** (versionCode 12). On-device AI generation requires validated model weights (see `docs/POC_CHECKLIST.md`).
 
 ## What is FRAME?
 

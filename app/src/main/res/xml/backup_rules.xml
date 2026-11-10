@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  allowBackup is false on the application tag. These rules remain as defence in depth
+  if backup is ever re-enabled: never back up models, cache, or project media.
+-->
 <full-backup-content>
-    <!-- Exclude large media and models from auto backup -->
-    <exclude domain="file" path="FRAME/" />
+    <exclude domain="file" path="FRAME/Models/" />
+    <exclude domain="file" path="FRAME/Cache/" />
+    <exclude domain="file" path="FRAME/Projects/" />
+    <exclude domain="file" path="FRAME/Logs/" />
+    <exclude domain="database" path="frame.db" />
 </full-backup-content>
