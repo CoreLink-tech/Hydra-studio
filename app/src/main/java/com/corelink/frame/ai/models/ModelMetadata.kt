@@ -28,7 +28,8 @@ data class ModelMetadata(
 
 enum class GenerationMode {
     IMAGE_TO_VIDEO,
-    TEXT_TO_VIDEO
+    TEXT_TO_VIDEO,
+    TEXT_TO_IMAGE
 }
 
 enum class ModelRuntime {

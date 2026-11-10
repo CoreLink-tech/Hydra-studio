@@ -37,7 +37,8 @@ class GenerationQueue @Inject constructor(
     private val encoder: FrameEncoder,
     private val downloadManager: ModelDownloadManager,
     private val fileManager: FrameFileManager,
-    private val resourceMonitor: ResourceMonitor
+    private val resourceMonitor: ResourceMonitor,
+    private val textToVideoPipeline: TextToVideoPipeline
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val mutex = Mutex()
@@ -66,6 +67,41 @@ class GenerationQueue @Inject constructor(
             motionPrompt = motionPrompt,
             negativePrompt = negativePrompt,
             inputImagePath = inputImagePath,
+            targetFrames = targetFrames,
+            targetWidth = targetWidth,
+            targetHeight = targetHeight,
+            status = TaskStatus.QUEUED.name,
+            stage = "queued",
+            createdAt = now,
+            projectId = projectId
+        )
+        scope.launch {
+            taskDao.insert(task)
+            ensureWorker()
+        }
+        return id
+    }
+
+
+    fun enqueueTextToVideo(
+        modelId: String,
+        prompt: String,
+        negativePrompt: String = "",
+        motionPrompt: String = "",
+        targetFrames: Int = 16,
+        targetWidth: Int = 512,
+        targetHeight: Int = 512,
+        projectId: String? = null
+    ): String {
+        val id = UUID.randomUUID().toString()
+        val now = System.currentTimeMillis()
+        val task = GenerationTaskEntity(
+            id = id,
+            modelId = modelId,
+            mode = GenerationMode.TEXT_TO_VIDEO.name,
+            prompt = prompt,
+            motionPrompt = motionPrompt,
+            negativePrompt = negativePrompt,
             targetFrames = targetFrames,
             targetWidth = targetWidth,
             targetHeight = targetHeight,
@@ -149,6 +185,58 @@ class GenerationQueue @Inject constructor(
 
         if (cancellingIds.contains(task.id)) {
             cancel(task)
+            return
+        }
+
+        if (task.mode == GenerationMode.TEXT_TO_VIDEO.name) {
+            try {
+                val result = textToVideoPipeline.generate(
+                    TextToVideoPipeline.Request(
+                        prompt = task.prompt,
+                        negativePrompt = task.negativePrompt,
+                        motionPrompt = task.motionPrompt,
+                        targetFrames = task.targetFrames,
+                        targetWidth = task.targetWidth,
+                        targetHeight = task.targetHeight
+                    )
+                ) { progress ->
+                    when (progress) {
+                        is GenerationProgress.Stage -> {
+                            scope.launch { updateStage(task.id, progress.name, progress.detail ?: "") }
+                        }
+                        else -> {}
+                    }
+                }
+                when (result) {
+                    is GenerationResult.Success -> {
+                        val finished = System.currentTimeMillis()
+                        val current = taskDao.getById(task.id) ?: return
+                        taskDao.update(
+                            current.copy(
+                                status = TaskStatus.SUCCEEDED.name,
+                                stage = "done",
+                                progressPercent = 100,
+                                outputPath = result.outputFile.absolutePath,
+                                generationTimeMs = result.generationTimeMs,
+                                finishedAt = finished
+                            )
+                        )
+                    }
+                    is GenerationResult.Failure -> {
+                        if (result.reason == FailureReason.CANCELLED || cancellingIds.contains(task.id)) {
+                            cancel(task)
+                        } else {
+                            fail(task, result.reason, result.message)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                fail(task, FailureReason.UNKNOWN, e.message ?: "T2V error")
+            } finally {
+                cancellingIds.remove(task.id)
+                _activeTaskId.value = null
+                ensureWorker()
+            }
             return
         }
 

@@ -10,7 +10,8 @@ object ModelCatalogue {
     val all: List<ModelMetadata> = listOf(
         mobileI2V,
         cineMobile,
-        wan21Light
+        wan21Light,
+        sdTurboT2i
     )
 
     fun byId(id: String): ModelMetadata? = all.find { it.id == id }
@@ -84,5 +85,27 @@ object ModelCatalogue {
         checksumSha256 = null,
         status = ModelStatus.RESEARCH,
         compatibilityNotes = "Only consider for High-performance profile after validation. Not a PoC target for 4 GB devices."
+    )
+
+    private val sdTurboT2i = ModelMetadata(
+        id = "sd_turbo_t2i",
+        displayName = "SD-Turbo class T2I (research)",
+        version = "research",
+        description = "Candidate lightweight text-to-image stage for staged text-to-video. Not validated on Android yet.",
+        architecture = "Distilled latent diffusion / turbo-style",
+        generationModes = setOf(GenerationMode.TEXT_TO_IMAGE),
+        parameterCountApprox = "varies (turbo class)",
+        storageBytesApprox = 2L * 1024 * 1024 * 1024,
+        minRamGbRecommended = 6.0f,
+        supportedResolutions = listOf("512x512"),
+        maxFrames = 1,
+        maxDurationSeconds = 0,
+        runtime = ModelRuntime.ONNX_MOBILE,
+        licence = "Depends on specific weights — verify before shipping",
+        licenceNotes = "Placeholder catalogue entry for staged T2V. Replace with a concrete, licence-cleared package after evaluation.",
+        sourceUrl = null,
+        checksumSha256 = null,
+        status = ModelStatus.RESEARCH,
+        compatibilityNotes = "Intended only as Stage A of T2V after MobileI2V PoC succeeds. High RAM pressure on 4 GB devices."
     )
 }

@@ -68,12 +68,26 @@ class CreateViewModel @Inject constructor(
 
             when (state.mode) {
                 CreateMode.TEXT -> {
-                    _uiState.update {
-                        it.copy(
-                            isSubmitting = false,
-                            error = "Text-to-video is not available until a validated T2V pipeline is installed (Milestone 9)."
-                        )
+                    if (state.prompt.isBlank()) {
+                        _uiState.update {
+                            it.copy(isSubmitting = false, error = "Enter a scene description.")
+                        }
+                        return@launch
                     }
+                    val frames = (state.durationSeconds * 8).coerceIn(8, 48)
+                    val taskId = generationQueue.enqueueTextToVideo(
+                        modelId = state.selectedModelId.ifBlank { "sd_turbo_t2i" },
+                        prompt = state.prompt,
+                        negativePrompt = state.negativePrompt,
+                        motionPrompt = state.motionPrompt,
+                        targetFrames = frames,
+                        targetWidth = 512,
+                        targetHeight = 512
+                    )
+                    _uiState.update {
+                        it.copy(isSubmitting = false, lastTaskId = taskId)
+                    }
+                    onEnqueued(taskId)
                     return@launch
                 }
                 CreateMode.IMAGE -> {
