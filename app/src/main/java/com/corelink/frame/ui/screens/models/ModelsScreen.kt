@@ -228,8 +228,21 @@ fun ModelsScreen(
                 onImport = {
                     importTargetId = row.meta.id
                     importLauncher.launch(arrayOf("*/*"))
-                }
+                },
+                onSmokeTest = { viewModel.runSmokeTest(row.meta.id) },
+                smokeRunning = state.smokeRunning
             )
+        }
+
+        state.lastSmokeReport?.let { report ->
+            item {
+                SmokeReportCard(
+                    report = report,
+                    canMarkExperimental = state.canMarkExperimental,
+                    onDismiss = { viewModel.dismissSmokeReport() },
+                    onMarkExperimental = { viewModel.markExperimentalHint(report.modelId) }
+                )
+            }
         }
 
         item {
