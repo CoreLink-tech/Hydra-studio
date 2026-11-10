@@ -427,6 +427,43 @@ class ModelsViewModel @Inject constructor(
                 "status store is added. Do NOT claim VALIDATED. Treat as EXPERIMENTAL for your own notes."
     }
 
+    /**
+     * Debug-only: copy assets/test_fixture/* into FRAME/Models/frame_test_fixture/
+     * and refresh install state. No file picker required.
+     */
+    fun installTestFixtureFromAssets() {
+        viewModelScope.launch {
+            val modelId = "frame_test_fixture"
+            val meta = ModelCatalogue.byId(modelId)
+            if (meta == null) {
+                message.value = "Test fixture not in catalogue"
+                return@launch
+            }
+            val dir = fileManager.modelDir(modelId)
+            val names = listOf("denoiser_fp32.onnx", "denoiser_fp16.onnx", "models_manifest.json")
+            val errors = mutableListOf<String>()
+            withContext(Dispatchers.IO) {
+                for (name in names) {
+                    try {
+                        appContext.assets.open("test_fixture/$name").use { input ->
+                            val dest = File(dir, name)
+                            FileOutputStream(dest).use { output -> input.copyTo(output) }
+                        }
+                    } catch (e: Exception) {
+                        errors += "$name: ${e.message}"
+                    }
+                }
+            }
+            downloadManager.refreshLocalState(meta)
+            refresh.update { it + 1 }
+            message.value = if (errors.isEmpty()) {
+                "Test fixture installed under FRAME/Models/$modelId — run smoke test"
+            } else {
+                "Fixture install errors: ${errors.joinToString()}"
+            }
+        }
+    }
+
     private fun queryDisplayName(uri: Uri): String? {
         val cursor = appContext.contentResolver.query(uri, null, null, null, null) ?: return null
         cursor.use {

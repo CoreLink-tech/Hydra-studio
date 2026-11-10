@@ -150,6 +150,11 @@ fun ModelsScreen(
                     Text("Manifest file", color = Accent, fontSize = 13.sp)
                 }
             }
+            if (com.corelink.frame.BuildConfig.DEBUG) {
+                TextButton(onClick = { viewModel.installTestFixtureFromAssets() }) {
+                    Text("Install test fixture", color = Accent, fontSize = 13.sp)
+                }
+            }
 
             // Manifest URL paste
             Row(
