@@ -28,6 +28,16 @@ import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -151,6 +161,65 @@ fun EditorScreen(
                     modifier = Modifier.size(36.dp)
                 )
             }
+        }
+
+        // Text / audio tools
+        var showTitleDialog by remember { mutableStateOf(false) }
+        var showSubtitleDialog by remember { mutableStateOf(false) }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ToolChip("Title") { showTitleDialog = true }
+            ToolChip("Subtitle") { showSubtitleDialog = true }
+            ToolChip("Fade") { viewModel.applyFadeOnSelected() }
+        }
+
+        // Volume for selected audio/video item
+        val selected = state.items.find { it.id == state.selectedItemId }
+        if (selected != null && (selected.type == "AUDIO" || selected.type == "VIDEO")) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Vol", color = TextMuted, fontSize = 11.sp, modifier = Modifier.width(28.dp))
+                Slider(
+                    value = selected.volume,
+                    onValueChange = { viewModel.setSelectedVolume(it) },
+                    modifier = Modifier.weight(1f),
+                    colors = SliderDefaults.colors(
+                        thumbColor = Accent,
+                        activeTrackColor = AccentSoft,
+                        inactiveTrackColor = Border
+                    )
+                )
+                Text("${(selected.volume * 100).toInt()}%", color = TextSecondary, fontSize = 11.sp)
+            }
+        }
+
+        if (showTitleDialog) {
+            TextInputDialog(
+                title = "Add title",
+                onDismiss = { showTitleDialog = false },
+                onConfirm = {
+                    viewModel.addTitleAtPlayhead(it)
+                    showTitleDialog = false
+                }
+            )
+        }
+        if (showSubtitleDialog) {
+            TextInputDialog(
+                title = "Add subtitle",
+                onDismiss = { showSubtitleDialog = false },
+                onConfirm = {
+                    viewModel.addSubtitleAtPlayhead(it)
+                    showSubtitleDialog = false
+                }
+            )
         }
 
         // Clip bin
@@ -327,4 +396,59 @@ private fun formatTime(ms: Long): String {
     val s = totalSec % 60
     val frac = ((ms % 1000) / 100).toInt()
     return "%d:%02d.%d".format(m, s, frac)
+}
+
+
+@Composable
+private fun ToolChip(label: String, onClick: () -> Unit) {
+    Text(
+        text = label,
+        color = TextPrimary,
+        fontSize = 12.sp,
+        modifier = Modifier
+            .background(Panel2, RoundedCornerShape(8.dp))
+            .border(1.dp, Border, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    )
+}
+
+@Composable
+private fun TextInputDialog(
+    title: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var value by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Panel,
+        titleContentColor = TextPrimary,
+        textContentColor = TextSecondary,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                placeholder = { Text("Enter text", color = TextMuted) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Accent,
+                    unfocusedBorderColor = Border,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                    cursorColor = Accent
+                )
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(value) }) {
+                Text("Add", color = Accent)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = TextSecondary)
+            }
+        }
+    )
 }

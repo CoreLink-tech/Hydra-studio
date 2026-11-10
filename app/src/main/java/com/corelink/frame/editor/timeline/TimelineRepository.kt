@@ -132,4 +132,85 @@ class TimelineRepository @Inject constructor(
 
     suspend fun projectDurationMs(projectId: String): Long =
         timelineDao.projectDurationMs(projectId)
+
+    suspend fun addTitle(
+        projectId: String,
+        text: String,
+        startMs: Long,
+        durationMs: Long = 3000L
+    ): TimelineItemEntity {
+        ensureDefaultTracks(projectId)
+        val tracks = timelineDao.getTracks(projectId)
+        val textTrack = tracks.firstOrNull { it.type == TrackType.TEXT.name } ?: tracks.last()
+        val item = TimelineItemEntity(
+            id = UUID.randomUUID().toString(),
+            projectId = projectId,
+            trackId = textTrack.id,
+            label = text.take(32),
+            type = TrackType.TEXT.name,
+            startMs = startMs.coerceAtLeast(0L),
+            durationMs = durationMs.coerceAtLeast(500L),
+            sourceInMs = 0L,
+            sourceOutMs = durationMs,
+            textContent = text
+        )
+        timelineDao.insertItem(item)
+        return item
+    }
+
+    suspend fun addAudio(
+        projectId: String,
+        name: String,
+        mediaPath: String,
+        durationMs: Long,
+        startMs: Long = -1L,
+        volume: Float = 1f
+    ): TimelineItemEntity {
+        ensureDefaultTracks(projectId)
+        val tracks = timelineDao.getTracks(projectId)
+        val audioTrack = tracks.firstOrNull { it.type == TrackType.AUDIO.name }
+            ?: tracks.first()
+        val start = if (startMs >= 0) startMs else timelineDao.projectDurationMs(projectId)
+        val dur = durationMs.coerceAtLeast(500L)
+        val item = TimelineItemEntity(
+            id = UUID.randomUUID().toString(),
+            projectId = projectId,
+            trackId = audioTrack.id,
+            mediaPath = mediaPath,
+            label = name,
+            type = TrackType.AUDIO.name,
+            startMs = start,
+            durationMs = dur,
+            sourceInMs = 0L,
+            sourceOutMs = dur,
+            volume = volume.coerceIn(0f, 1f)
+        )
+        timelineDao.insertItem(item)
+        return item
+    }
+
+    suspend fun setVolume(itemId: String, volume: Float) {
+        val item = timelineDao.getItem(itemId) ?: return
+        timelineDao.updateItem(item.copy(volume = volume.coerceIn(0f, 1f)))
+    }
+
+    suspend fun setTextContent(itemId: String, text: String) {
+        val item = timelineDao.getItem(itemId) ?: return
+        timelineDao.updateItem(
+            item.copy(
+                textContent = text,
+                label = text.take(32)
+            )
+        )
+    }
+
+    suspend fun setFadeHints(itemId: String, fadeInMs: Long, fadeOutMs: Long) {
+        // Encoded as volume envelope metadata in label prefix for Milestone 7 simplicity.
+        // Full keyframe envelopes land with export engine.
+        val item = timelineDao.getItem(itemId) ?: return
+        val meta = "fade:${fadeInMs.coerceAtLeast(0)}:${fadeOutMs.coerceAtLeast(0)}"
+        val base = item.label.substringAfter(" | ").ifBlank { item.label }
+        timelineDao.updateItem(item.copy(label = if (item.type == "AUDIO") "$meta | $base" else item.label))
+    }
+
 }

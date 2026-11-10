@@ -152,6 +152,66 @@ class EditorViewModel @Inject constructor(
         }
     }
 
+
+    fun addTitleAtPlayhead(text: String) {
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            timelineRepository.addTitle(
+                projectId = projectId,
+                text = text.trim(),
+                startMs = _uiState.value.playheadMs,
+                durationMs = 3000L
+            )
+            _uiState.update { it.copy(message = "Title added") }
+        }
+    }
+
+    fun addSubtitleAtPlayhead(text: String) {
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            timelineRepository.addTitle(
+                projectId = projectId,
+                text = text.trim(),
+                startMs = _uiState.value.playheadMs,
+                durationMs = 2500L
+            )
+            _uiState.update { it.copy(message = "Subtitle added") }
+        }
+    }
+
+    fun setSelectedVolume(volume: Float) {
+        val id = _uiState.value.selectedItemId ?: return
+        viewModelScope.launch {
+            timelineRepository.setVolume(id, volume)
+            _uiState.update { it.copy(message = "Volume ${(volume * 100).toInt()}%") }
+        }
+    }
+
+    fun applyFadeOnSelected(fadeInMs: Long = 500, fadeOutMs: Long = 500) {
+        val id = _uiState.value.selectedItemId ?: return
+        viewModelScope.launch {
+            timelineRepository.setFadeHints(id, fadeInMs, fadeOutMs)
+            _uiState.update { it.copy(message = "Fade in/out applied") }
+        }
+    }
+
+    fun registerAudioAssetAndAdd(
+        name: String,
+        path: String,
+        durationMs: Long
+    ) {
+        viewModelScope.launch {
+            timelineRepository.addAudio(
+                projectId = projectId,
+                name = name,
+                mediaPath = path,
+                durationMs = durationMs,
+                startMs = _uiState.value.playheadMs
+            )
+            _uiState.update { it.copy(message = "Audio added to timeline") }
+        }
+    }
+
     fun clearMessage() = _uiState.update { it.copy(message = null) }
 
     override fun onCleared() {
