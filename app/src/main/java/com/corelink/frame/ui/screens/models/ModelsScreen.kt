@@ -115,9 +115,10 @@ private fun ModelDetailCard(row: ModelRow) {
     }
     val installColor = when (row.install.state) {
         InstallState.INSTALLED -> Success
+        InstallState.PARTIAL -> Accent
         InstallState.CORRUPT, InstallState.INCOMPATIBLE -> Danger
         InstallState.DOWNLOADING, InstallState.VERIFYING -> Accent
-        else -> TextMuted
+        InstallState.NOT_PRESENT -> TextMuted
     }
 
     Column(

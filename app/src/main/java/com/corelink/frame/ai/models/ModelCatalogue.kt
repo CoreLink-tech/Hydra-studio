@@ -4,6 +4,9 @@ package com.corelink.frame.ai.models
  * Static catalogue of known candidate models.
  * New models are added here without changing generation code.
  * Status is RESEARCH / EXPERIMENTAL until real-device validation occurs.
+ *
+ * Empty [ModelMetadata.files] means the pack is not installable yet
+ * (weights / ONNX conversion still in progress). UI must show that clearly.
  */
 object ModelCatalogue {
 
@@ -39,10 +42,9 @@ object ModelCatalogue {
         licence = "Research — verify redistribution terms in upstream repo",
         licenceNotes = "Source: https://github.com/hustvl/MobileI2V. Confirm licence before shipping.",
         sourceUrl = "https://github.com/hustvl/MobileI2V",
-        checksumSha256 = null,
-        expectedFiles = listOf("model.onnx"),
+        files = emptyList(), // not installable yet — ONNX conversion pending
         status = ModelStatus.RESEARCH,
-        compatibilityNotes = "Community ONNX ports exist. Peak memory on 4 GB devices is unmeasured. Start with low resolution."
+        compatibilityNotes = "Official weights are PyTorch only (hybrid_371.pth). No verified ONNX pack yet. Peak memory on 4 GB devices is unmeasured."
     )
 
     private val cineMobile = ModelMetadata(
@@ -62,10 +64,9 @@ object ModelCatalogue {
         licence = "Research — verify before redistribution",
         licenceNotes = "Check paper and any released weights for exact terms.",
         sourceUrl = "https://arxiv.org/abs/2607.03803",
-        checksumSha256 = null,
-        expectedFiles = listOf("model.onnx"),
+        files = emptyList(), // no public weights yet
         status = ModelStatus.RESEARCH,
-        compatibilityNotes = "Reported ~1.8 GB peak on Dimensity 8400. Promising secondary candidate."
+        compatibilityNotes = "Paper only — no public code or weights. Reported ~1.8 GB peak on Dimensity 8400."
     )
 
     private val wan21Light = ModelMetadata(
@@ -85,8 +86,7 @@ object ModelCatalogue {
         licence = "Apache 2.0",
         licenceNotes = "Permissive. Still too heavy for 4 GB baseline.",
         sourceUrl = null,
-        checksumSha256 = null,
-        expectedFiles = listOf("model.onnx"),
+        files = emptyList(),
         status = ModelStatus.RESEARCH,
         compatibilityNotes = "Only consider for High-performance profile after validation. Not a PoC target for 4 GB devices."
     )
@@ -108,8 +108,7 @@ object ModelCatalogue {
         licence = "Depends on specific weights — verify before shipping",
         licenceNotes = "Placeholder catalogue entry for staged T2V. Replace with a concrete, licence-cleared package after evaluation.",
         sourceUrl = null,
-        checksumSha256 = null,
-        expectedFiles = listOf("model.onnx"),
+        files = emptyList(),
         status = ModelStatus.RESEARCH,
         compatibilityNotes = "Intended only as Stage A of T2V after MobileI2V PoC succeeds. High RAM pressure on 4 GB devices."
     )

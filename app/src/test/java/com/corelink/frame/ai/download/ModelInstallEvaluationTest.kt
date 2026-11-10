@@ -2,6 +2,7 @@ package com.corelink.frame.ai.download
 
 import com.corelink.frame.ai.models.GenerationMode
 import com.corelink.frame.ai.models.InstallState
+import com.corelink.frame.ai.models.ModelFile
 import com.corelink.frame.ai.models.ModelMetadata
 import com.corelink.frame.ai.models.ModelRuntime
 import com.corelink.frame.ai.models.ModelStatus
@@ -12,6 +13,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.security.MessageDigest
 
 class ModelInstallEvaluationTest {
 
@@ -19,60 +21,164 @@ class ModelInstallEvaluationTest {
     val tmp = TemporaryFolder()
 
     @Test
-    fun missingExpectedFile_isCorrupt() {
-        val dir = tmp.newFolder("m1")
-        File(dir, "other.bin").writeBytes(ByteArray(2_000_000))
+    fun emptyFilesList_notPresent() {
+        val dir = tmp.newFolder("empty_meta")
         val state = ModelInstallEvaluator.evaluate(
-            sampleMeta(expectedFiles = listOf("model.onnx")),
+            sampleMeta(files = emptyList()),
+            dir,
+            emptyList(),
+            0L
+        )
+        assertEquals(InstallState.NOT_PRESENT, state.state)
+    }
+
+    @Test
+    fun emptyFilesList_withOrphanFiles_isCorrupt() {
+        val dir = tmp.newFolder("orphan")
+        File(dir, "stray.bin").writeBytes(ByteArray(100))
+        val state = ModelInstallEvaluator.evaluate(
+            sampleMeta(files = emptyList()),
             dir,
             dir.listFiles()!!.toList(),
-            dir.listFiles()!!.sumOf { it.length() }
+            100L
         )
         assertEquals(InstallState.CORRUPT, state.state)
+        assertTrue(state.validationError!!.contains("empty files[]"))
+    }
+
+    @Test
+    fun noFilesOnDisk_notPresent_withMissingList() {
+        val dir = tmp.newFolder("none")
+        val state = ModelInstallEvaluator.evaluate(
+            sampleMeta(
+                files = listOf(
+                    ModelFile("a.onnx", sizeBytes = 10, sha256 = shaOf("a")),
+                    ModelFile("b.onnx", sizeBytes = 10, sha256 = shaOf("b"))
+                )
+            ),
+            dir,
+            emptyList(),
+            0L
+        )
+        assertEquals(InstallState.NOT_PRESENT, state.state)
+        assertEquals(listOf("a.onnx", "b.onnx"), state.missingFiles)
+    }
+
+    @Test
+    fun oneOfTwoPresent_isPartial() {
+        val dir = tmp.newFolder("partial")
+        val a = File(dir, "a.onnx").also { it.writeText("aaaa") }
+        val state = ModelInstallEvaluator.evaluate(
+            sampleMeta(
+                files = listOf(
+                    ModelFile("a.onnx", sizeBytes = a.length(), sha256 = shaOf("aaaa")),
+                    ModelFile("b.onnx", sizeBytes = 4, sha256 = shaOf("bbbb"))
+                )
+            ),
+            dir,
+            listOf(a),
+            a.length()
+        )
+        assertEquals(InstallState.PARTIAL, state.state)
+        assertEquals(listOf("b.onnx"), state.missingFiles)
         assertTrue(state.validationError!!.contains("Missing"))
     }
 
     @Test
-    fun expectedFilePresent_withoutChecksum_installedUnverified() {
-        val dir = tmp.newFolder("m2")
-        File(dir, "model.onnx").writeText("weights")
+    fun wrongSize_isCorrupt() {
+        val dir = tmp.newFolder("size")
+        val f = File(dir, "model.onnx").also { it.writeText("weights") }
         val state = ModelInstallEvaluator.evaluate(
-            sampleMeta(expectedFiles = listOf("model.onnx"), checksum = null),
+            sampleMeta(
+                files = listOf(
+                    ModelFile("model.onnx", sizeBytes = 9999L, sha256 = shaOf("weights"))
+                )
+            ),
             dir,
-            dir.listFiles()!!.toList(),
-            7L
+            listOf(f),
+            f.length()
         )
-        assertEquals(InstallState.INSTALLED, state.state)
-        assertTrue(state.checksumUnverified)
+        assertEquals(InstallState.CORRUPT, state.state)
+        assertTrue(state.corruptFiles.contains("model.onnx"))
+        assertTrue(state.validationError!!.contains("size"))
     }
 
     @Test
     fun checksumMismatch_isCorrupt() {
-        val dir = tmp.newFolder("m3")
-        File(dir, "model.onnx").writeText("weights")
+        val dir = tmp.newFolder("badhash")
+        val f = File(dir, "model.onnx").also { it.writeText("weights") }
         val state = ModelInstallEvaluator.evaluate(
             sampleMeta(
-                expectedFiles = listOf("model.onnx"),
-                checksum = "0000000000000000000000000000000000000000000000000000000000000000"
+                files = listOf(
+                    ModelFile(
+                        "model.onnx",
+                        sizeBytes = f.length(),
+                        sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+                    )
+                )
             ),
             dir,
-            dir.listFiles()!!.toList(),
-            7L
+            listOf(f),
+            f.length()
         )
         assertEquals(InstallState.CORRUPT, state.state)
         assertTrue(state.validationError!!.contains("SHA-256"))
+        assertEquals(listOf("model.onnx"), state.corruptFiles)
     }
 
     @Test
-    fun checksumMatch_installedVerified() {
-        val dir = tmp.newFolder("m4")
-        val f = File(dir, "model.onnx")
-        f.writeText("weights")
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
-            .digest(f.readBytes())
-            .joinToString("") { "%02x".format(it) }
+    fun allPresentWithChecksum_installedVerified() {
+        val dir = tmp.newFolder("ok")
+        val aContent = "weights-a"
+        val bContent = "weights-b"
+        val a = File(dir, "a.onnx").also { it.writeText(aContent) }
+        val b = File(dir, "b.onnx").also { it.writeText(bContent) }
         val state = ModelInstallEvaluator.evaluate(
-            sampleMeta(expectedFiles = listOf("model.onnx"), checksum = digest),
+            sampleMeta(
+                files = listOf(
+                    ModelFile("a.onnx", sizeBytes = a.length(), sha256 = shaOf(aContent)),
+                    ModelFile("b.onnx", sizeBytes = b.length(), sha256 = shaOf(bContent))
+                )
+            ),
+            dir,
+            listOf(a, b),
+            a.length() + b.length()
+        )
+        assertEquals(InstallState.INSTALLED, state.state)
+        assertFalse(state.checksumUnverified)
+        assertTrue(state.missingFiles.isEmpty())
+        assertTrue(state.corruptFiles.isEmpty())
+    }
+
+    @Test
+    fun presentWithoutChecksum_installedUnverified() {
+        val dir = tmp.newFolder("nocheck")
+        val f = File(dir, "model.onnx").also { it.writeText("weights") }
+        val state = ModelInstallEvaluator.evaluate(
+            sampleMeta(
+                files = listOf(
+                    ModelFile("model.onnx", sizeBytes = f.length(), sha256 = null)
+                )
+            ),
+            dir,
+            listOf(f),
+            f.length()
+        )
+        assertEquals(InstallState.INSTALLED, state.state)
+        assertTrue(state.checksumUnverified)
+        assertTrue(state.validationError!!.contains("no SHA-256"))
+    }
+
+    @Test
+    fun sizeZeroMeansSkipSizeCheck() {
+        val dir = tmp.newFolder("zerosize")
+        val f = File(dir, "model.onnx").also { it.writeText("anything") }
+        val state = ModelInstallEvaluator.evaluate(
+            sampleMeta(
+                files = listOf(
+                    ModelFile("model.onnx", sizeBytes = 0L, sha256 = shaOf("anything"))
+                )
+            ),
             dir,
             listOf(f),
             f.length()
@@ -81,10 +187,7 @@ class ModelInstallEvaluationTest {
         assertFalse(state.checksumUnverified)
     }
 
-    private fun sampleMeta(
-        expectedFiles: List<String>,
-        checksum: String? = null
-    ) = ModelMetadata(
+    private fun sampleMeta(files: List<ModelFile>) = ModelMetadata(
         id = "test",
         displayName = "Test",
         version = "1",
@@ -101,9 +204,13 @@ class ModelInstallEvaluationTest {
         licence = "test",
         licenceNotes = "",
         sourceUrl = null,
-        checksumSha256 = checksum,
-        expectedFiles = expectedFiles,
+        files = files,
         status = ModelStatus.RESEARCH,
         compatibilityNotes = ""
     )
+
+    private fun shaOf(text: String): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(text.toByteArray())
+        return digest.joinToString("") { "%02x".format(it) }
+    }
 }
