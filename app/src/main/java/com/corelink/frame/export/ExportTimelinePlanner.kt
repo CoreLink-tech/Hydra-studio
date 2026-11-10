@@ -102,8 +102,12 @@ object ExportTimelinePlanner {
     }
 
     private fun computeGaps(clips: List<PlannedClip>): List<Long> {
-        if (clips.size < 2) return emptyList()
+        if (clips.isEmpty()) return emptyList()
         val gaps = mutableListOf<Long>()
+        // Leading gap: first clip does not start at 0
+        if (clips.first().startMs > GAP_TOLERANCE_MS) {
+            gaps += clips.first().startMs
+        }
         for (i in 0 until clips.lastIndex) {
             val end = clips[i].startMs + clips[i].clippedDurationMs.coerceAtLeast(clips[i].durationMs)
             val nextStart = clips[i + 1].startMs

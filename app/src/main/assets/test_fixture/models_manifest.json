@@ -1,0 +1,66 @@
+{
+  "modelId": "frame_test_fixture",
+  "version": 1,
+  "files": [
+    {
+      "name": "denoiser_fp32.onnx",
+      "sizeBytes": 217,
+      "sha256": "3eb447a20ba8cb1450704b1e8b474c4bfa2cf62366eef81f5eb03a51fa1ce3d5",
+      "role": "denoiser"
+    },
+    {
+      "name": "denoiser_fp16.onnx",
+      "sizeBytes": 177,
+      "sha256": "62c54cabb74f117e1aecb46f927749ef3dbcc2e2921282a06cb232d93d2b6857",
+      "role": "denoiser_fp16"
+    }
+  ],
+  "graphs": [
+    {
+      "file": "denoiser_fp32.onnx",
+      "inputs": [
+        {
+          "name": "x",
+          "dtype": "float32",
+          "shape": [
+            1,
+            4
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "dtype": "float32",
+          "shape": [
+            1,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "file": "denoiser_fp16.onnx",
+      "inputs": [
+        {
+          "name": "x",
+          "dtype": "float16",
+          "shape": [
+            1,
+            4
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "dtype": "float16",
+          "shape": [
+            1,
+            4
+          ]
+        }
+      ]
+    }
+  ]
+}

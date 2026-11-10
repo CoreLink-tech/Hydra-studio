@@ -12,6 +12,7 @@ object ModelCatalogue {
 
     val all: List<ModelMetadata>
         get() = listOf(
+            testFixture,
             mobileI2V,
             cineMobile,
             wan21Light,
@@ -24,6 +25,47 @@ object ModelCatalogue {
         all.filter { it.minRamGbRecommended <= minRamGb + 0.3f }
 
     // -------------------------------------------------------------------------
+
+    /**
+     * Tiny MatMul+Add ONNX pack shipped in assets for install + smoke-test wiring.
+     * Not an AI video model — labelled clearly as a test fixture.
+     */
+    private val testFixture = ModelMetadata(
+        id = "frame_test_fixture",
+        displayName = "FRAME test fixture (NOT an AI model)",
+        version = "1",
+        description = "Tiny MatMul+Add ONNX graphs for install/smoke-test plumbing only. Zero generative capability.",
+        architecture = "MatMul + Add (fixture)",
+        generationModes = emptySet(),
+        parameterCountApprox = "negligible",
+        storageBytesApprox = 400L,
+        minRamGbRecommended = 1.0f,
+        supportedResolutions = emptyList(),
+        maxFrames = 0,
+        maxDurationSeconds = 0,
+        runtime = ModelRuntime.ONNX_MOBILE,
+        licence = "Apache-2.0 (FRAME fixture)",
+        licenceNotes = "Synthetic test weights only. Do not treat as a video model.",
+        sourceUrl = null,
+        files = listOf(
+            ModelFile(
+                name = "denoiser_fp32.onnx",
+                url = null,
+                sizeBytes = 217L,
+                sha256 = "3eb447a20ba8cb1450704b1e8b474c4bfa2cf62366eef81f5eb03a51fa1ce3d5",
+                role = "denoiser"
+            ),
+            ModelFile(
+                name = "denoiser_fp16.onnx",
+                url = null,
+                sizeBytes = 177L,
+                sha256 = "62c54cabb74f117e1aecb46f927749ef3dbcc2e2921282a06cb232d93d2b6857",
+                role = "denoiser_fp16"
+            )
+        ),
+        status = ModelStatus.RESEARCH,
+        compatibilityNotes = "Install via debug 'Install test fixture' button. Then run smoke test."
+    )
 
     private val mobileI2V = ModelMetadata(
         id = "mobilei2v_270m",

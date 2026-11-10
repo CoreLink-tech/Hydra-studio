@@ -1,5 +1,6 @@
 package com.corelink.frame.editor.timeline
 
+import android.media.MediaMetadataRetriever
 import com.corelink.frame.data.local.dao.ClipDao
 import com.corelink.frame.data.local.dao.TimelineDao
 import com.corelink.frame.data.local.entity.ClipEntity
@@ -57,7 +58,8 @@ class TimelineRepository @Inject constructor(
             ?: tracks.first()
 
         val projectEnd = timelineDao.projectDurationMs(projectId)
-        val duration = clip.durationMs.coerceAtLeast(1000L)
+        // Prefer real media duration over recorded/placeholder values.
+        val duration = resolveMediaDurationMs(clip.filePath, clip.durationMs)
 
         val item = TimelineItemEntity(
             id = UUID.randomUUID().toString(),
@@ -75,6 +77,30 @@ class TimelineRepository @Inject constructor(
         )
         timelineDao.insertItem(item)
         return item
+    }
+
+    /**
+     * Read duration from the media file. Falls back to [fallbackMs] (then 1000 ms)
+     * when the retriever fails or the path is empty.
+     */
+    fun resolveMediaDurationMs(path: String?, fallbackMs: Long): Long {
+        val floor = fallbackMs.coerceAtLeast(1000L)
+        if (path.isNullOrBlank()) return floor
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(path)
+            val meta = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val parsed = meta?.toLongOrNull()
+            if (parsed != null && parsed > 0L) parsed else floor
+        } catch (_: Exception) {
+            floor
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {
+                // ignore
+            }
+        }
     }
 
     suspend fun trimItem(itemId: String, newSourceInMs: Long, newSourceOutMs: Long) {

@@ -89,6 +89,38 @@ class ExportTimelinePlannerTest {
     }
 
     @Test
+    fun leadingGap_firstStartMsGreaterThanZero_isDetected() {
+        val items = listOf(
+            video(id = "a", startMs = 1500, durationMs = 2000, sourceInMs = 0, sourceOutMs = 2000, path = "/a.mp4")
+        )
+        val plan = ExportTimelinePlanner.plan(items)
+        assertTrue(plan.hasVideoGaps)
+        assertEquals(listOf(1500L), plan.videoGapsMs)
+    }
+
+    @Test
+    fun leadingGap_audio_isDetected() {
+        val items = listOf(
+            TimelineItemEntity(
+                id = "aud",
+                projectId = "p",
+                trackId = "t",
+                mediaPath = "/music.mp3",
+                label = "music",
+                type = "AUDIO",
+                startMs = 2000,
+                durationMs = 4000,
+                sourceInMs = 0,
+                sourceOutMs = 4000,
+                volume = 1f
+            )
+        )
+        val plan = ExportTimelinePlanner.plan(items)
+        assertTrue(plan.hasAudioGaps)
+        assertEquals(listOf(2000L), plan.audioGapsMs)
+    }
+
+    @Test
     fun volume_isPreservedOnPlannedAudio() {
         val items = listOf(
             TimelineItemEntity(
