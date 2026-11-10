@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import com.corelink.frame.ui.screens.create.CreateScreen
 import com.corelink.frame.ui.screens.film.FilmScreen
 import com.corelink.frame.ui.screens.editor.EditorScreen
+import com.corelink.frame.ui.screens.export.ExportScreen
 import com.corelink.frame.ui.screens.generation.GenerationScreen
 import com.corelink.frame.ui.screens.hardware.HardwareScreen
 import com.corelink.frame.ui.screens.home.HomeScreen
@@ -104,7 +105,8 @@ fun FrameNavHost(
             composable(FrameDestination.Film.route) {
                 FilmScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenEditor = { id -> navController.navigate(FrameDestination.Editor.createRoute(id)) }
+                    onOpenEditor = { id -> navController.navigate(FrameDestination.Editor.createRoute(id)) },
+                    onOpenExport = { id -> navController.navigate(FrameDestination.Export.createRoute(id)) }
                 )
             }
 
@@ -113,6 +115,13 @@ fun FrameNavHost(
                     onBack = { navController.popBackStack() }
                 )
             }
+
+            composable(FrameDestination.Export.route) {
+                ExportScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
 
             composable(FrameDestination.Create.route) {
                 CreateScreen(

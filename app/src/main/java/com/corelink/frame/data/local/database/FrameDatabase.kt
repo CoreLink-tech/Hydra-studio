@@ -4,12 +4,14 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.corelink.frame.data.local.dao.AudioAssetDao
 import com.corelink.frame.data.local.dao.ClipDao
+import com.corelink.frame.data.local.dao.ExportTaskDao
 import com.corelink.frame.data.local.dao.GenerationTaskDao
 import com.corelink.frame.data.local.dao.ProjectDao
 import com.corelink.frame.data.local.dao.SceneDao
 import com.corelink.frame.data.local.dao.TimelineDao
 import com.corelink.frame.data.local.entity.AudioAssetEntity
 import com.corelink.frame.data.local.entity.ClipEntity
+import com.corelink.frame.data.local.entity.ExportTaskEntity
 import com.corelink.frame.data.local.entity.GenerationTaskEntity
 import com.corelink.frame.data.local.entity.ProjectEntity
 import com.corelink.frame.data.local.entity.SceneEntity
@@ -24,9 +26,10 @@ import com.corelink.frame.data.local.entity.TimelineTrackEntity
         GenerationTaskEntity::class,
         TimelineTrackEntity::class,
         TimelineItemEntity::class,
-        AudioAssetEntity::class
+        AudioAssetEntity::class,
+        ExportTaskEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class FrameDatabase : RoomDatabase() {
@@ -36,4 +39,5 @@ abstract class FrameDatabase : RoomDatabase() {
     abstract fun generationTaskDao(): GenerationTaskDao
     abstract fun timelineDao(): TimelineDao
     abstract fun audioAssetDao(): AudioAssetDao
+    abstract fun exportTaskDao(): ExportTaskDao
 }

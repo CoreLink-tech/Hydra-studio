@@ -51,6 +51,7 @@ import com.corelink.frame.ui.theme.TextSecondary
 fun FilmScreen(
     onBack: () -> Unit,
     onOpenEditor: (String) -> Unit = {},
+    onOpenExport: (String) -> Unit = {},
     viewModel: FilmViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -152,6 +153,22 @@ fun FilmScreen(
                             Text("Arrange clips on the timeline", color = TextMuted, fontSize = 12.sp)
                         }
                         Text("Open", color = Accent, fontSize = 12.sp)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Panel2, RoundedCornerShape(10.dp))
+                            .border(1.dp, Border, RoundedCornerShape(10.dp))
+                            .clickable { onOpenExport(project.id) }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Export film", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                            Text("Render timeline to MP4", color = TextMuted, fontSize = 12.sp)
+                        }
+                        Text("Export", color = Accent, fontSize = 12.sp)
                     }
                 }
                 Spacer(Modifier.height(24.dp))

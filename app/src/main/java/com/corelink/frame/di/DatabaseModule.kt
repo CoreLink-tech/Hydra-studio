@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.corelink.frame.data.local.dao.AudioAssetDao
 import com.corelink.frame.data.local.dao.ClipDao
+import com.corelink.frame.data.local.dao.ExportTaskDao
 import com.corelink.frame.data.local.dao.GenerationTaskDao
 import com.corelink.frame.data.local.dao.ProjectDao
 import com.corelink.frame.data.local.dao.SceneDao
@@ -38,4 +39,5 @@ object DatabaseModule {
     @Provides fun provideGenerationTaskDao(db: FrameDatabase): GenerationTaskDao = db.generationTaskDao()
     @Provides fun provideTimelineDao(db: FrameDatabase): TimelineDao = db.timelineDao()
     @Provides fun provideAudioAssetDao(db: FrameDatabase): AudioAssetDao = db.audioAssetDao()
+    @Provides fun provideExportTaskDao(db: FrameDatabase): ExportTaskDao = db.exportTaskDao()
 }
