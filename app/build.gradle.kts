@@ -102,4 +102,6 @@ dependencies {
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
+    // ONNX Runtime Mobile — primary inference engine for Milestone 3+
+    implementation(libs.onnxruntime.android)
 }
