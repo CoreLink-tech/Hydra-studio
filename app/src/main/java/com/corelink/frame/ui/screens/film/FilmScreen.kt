@@ -1,6 +1,7 @@
 package com.corelink.frame.ui.screens.film
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -140,6 +141,7 @@ fun FilmScreen(
                             .fillMaxWidth()
                             .background(Panel2, RoundedCornerShape(10.dp))
                             .border(1.dp, Border, RoundedCornerShape(10.dp))
+                            .clickable { onOpenEditor(project.id) }
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -147,13 +149,9 @@ fun FilmScreen(
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Open editor", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                            Text("Timeline editing arrives in Milestone 6", color = TextMuted, fontSize = 12.sp)
+                            Text("Arrange clips on the timeline", color = TextMuted, fontSize = 12.sp)
                         }
-                        Text(
-                            "Soon",
-                            color = Accent,
-                            fontSize = 12.sp
-                        )
+                        Text("Open", color = Accent, fontSize = 12.sp)
                     }
                 }
                 Spacer(Modifier.height(24.dp))

@@ -26,6 +26,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.corelink.frame.ui.screens.create.CreateScreen
 import com.corelink.frame.ui.screens.film.FilmScreen
+import com.corelink.frame.ui.screens.editor.EditorScreen
 import com.corelink.frame.ui.screens.generation.GenerationScreen
 import com.corelink.frame.ui.screens.hardware.HardwareScreen
 import com.corelink.frame.ui.screens.home.HomeScreen
@@ -106,6 +107,13 @@ fun FrameNavHost(
                     onOpenEditor = { id -> navController.navigate(FrameDestination.Editor.createRoute(id)) }
                 )
             }
+
+            composable(FrameDestination.Editor.route) {
+                EditorScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
             composable(FrameDestination.Create.route) {
                 CreateScreen(
                     onGenerationStarted = { taskId ->

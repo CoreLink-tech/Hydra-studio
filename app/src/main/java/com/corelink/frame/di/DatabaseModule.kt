@@ -6,6 +6,7 @@ import com.corelink.frame.data.local.dao.ClipDao
 import com.corelink.frame.data.local.dao.GenerationTaskDao
 import com.corelink.frame.data.local.dao.ProjectDao
 import com.corelink.frame.data.local.dao.SceneDao
+import com.corelink.frame.data.local.dao.TimelineDao
 import com.corelink.frame.data.local.database.FrameDatabase
 import dagger.Module
 import dagger.Provides
@@ -34,4 +35,5 @@ object DatabaseModule {
     @Provides fun provideSceneDao(db: FrameDatabase): SceneDao = db.sceneDao()
     @Provides fun provideClipDao(db: FrameDatabase): ClipDao = db.clipDao()
     @Provides fun provideGenerationTaskDao(db: FrameDatabase): GenerationTaskDao = db.generationTaskDao()
+    @Provides fun provideTimelineDao(db: FrameDatabase): TimelineDao = db.timelineDao()
 }
