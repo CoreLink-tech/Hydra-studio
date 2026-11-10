@@ -4,6 +4,10 @@ import android.content.Context
 import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.audio.ChannelMixingAudioProcessor
+import androidx.media3.common.audio.ChannelMixingMatrix
+import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.effect.Effects
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
@@ -14,7 +18,6 @@ import com.corelink.frame.data.local.dao.ExportTaskDao
 import com.corelink.frame.data.local.dao.TimelineDao
 import com.corelink.frame.data.local.entity.ExportStatus
 import com.corelink.frame.data.local.entity.ExportTaskEntity
-import com.corelink.frame.data.local.entity.TrackType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -29,8 +32,13 @@ import kotlin.coroutines.resume
  * Builds an MP4 from the project timeline using Media3 Transformer when
  * real media files are present. Validates the output file before success.
  *
- * If the timeline has no usable media paths, fails with a clear message
- * instead of writing a fake file.
+ * Timeline fidelity (Media3 1.5.0):
+ * - sourceInMs/sourceOutMs → [MediaItem.ClippingConfiguration]
+ * - volume → [ChannelMixingAudioProcessor] gain matrix on the item Effects
+ * - item order → sorted by startMs within each track type
+ * - gaps / startMs offsets: NOT supported by EditedMediaItemSequence (concat only).
+ *   Detected gaps cause a clear export failure (see [ExportTimelinePlanner]).
+ * - TEXT items: not rendered; export fails with an explicit message.
  */
 @Singleton
 class ExportEngine @Inject constructor(
@@ -83,27 +91,25 @@ class ExportEngine @Inject constructor(
         }
         onProgress(ExportProgress.Stage("preparing", "Reading timeline"))
 
-        val items = timelineDao.observeItems(task.projectId).let {
-            // one-shot read via getTracks + items
-            timelineDao.getTracks(task.projectId)
-            // Use projectDuration and collect items through a direct query path
-        }
-        // Direct query for items — use suspend helpers
         val allItems = withContext(Dispatchers.IO) {
-            // TimelineDao has observe only; add a one-shot via existing project duration + track items
             val tracks = timelineDao.getTracks(task.projectId)
             tracks.flatMap { timelineDao.getItemsForTrack(it.id) }
                 .sortedBy { it.startMs }
         }
 
-        val videoItems = allItems.filter {
-            it.type == TrackType.VIDEO.name && !it.mediaPath.isNullOrBlank()
-        }
-        val audioItems = allItems.filter {
-            it.type == TrackType.AUDIO.name && !it.mediaPath.isNullOrBlank()
+        val plan = ExportTimelinePlanner.plan(allItems)
+
+        if (plan.hasUnsupportedTitles) {
+            val labels = plan.textItems.map { it.label.ifBlank { it.textContent ?: it.id } }
+            fail(
+                task.id,
+                "Export does not support title/subtitle items yet. " +
+                    "Remove or flatten these TEXT items first: ${labels.joinToString()}"
+            )
+            return
         }
 
-        if (videoItems.isEmpty()) {
+        if (plan.video.isEmpty()) {
             fail(
                 task.id,
                 "No video clips with valid files on the timeline. " +
@@ -112,8 +118,21 @@ class ExportEngine @Inject constructor(
             return
         }
 
-        // Verify files exist
-        val missing = videoItems.mapNotNull { it.mediaPath }.filter { !File(it).exists() }
+        // Media3 1.5 EditedMediaItemSequence concatenates only — no gap/startMs API.
+        if (plan.hasVideoGaps || plan.hasAudioGaps) {
+            fail(
+                task.id,
+                "Timeline has gaps between clips. Media3 Transformer 1.5.0 cannot insert " +
+                    "silence/black between items in an EditedMediaItemSequence. " +
+                    "Move clips so they abut on the timeline, or wait for gap-filler support. " +
+                    "Video gaps ms=${plan.videoGapsMs}, audio gaps ms=${plan.audioGapsMs}."
+            )
+            return
+        }
+
+        val missing = (plan.video + plan.audio)
+            .map { it.mediaPath }
+            .filter { !File(it).exists() }
         if (missing.isNotEmpty()) {
             fail(
                 task.id,
@@ -122,7 +141,7 @@ class ExportEngine @Inject constructor(
             return
         }
 
-        onProgress(ExportProgress.Stage("composing", "Building composition"))
+        onProgress(ExportProgress.Stage("composing", "Building composition with trims/volume"))
         update(task.id) { it.copy(stage = "composing") }
 
         val outDir = fileManager.projectExportsDir(task.projectId)
@@ -133,29 +152,22 @@ class ExportEngine @Inject constructor(
             onProgress(ExportProgress.Stage("encoding", "Media3 Transformer"))
             update(task.id) { it.copy(stage = "encoding", progressPercent = 10) }
 
-            val editedVideoItems = videoItems.map { item ->
-                val mediaItem = MediaItem.fromUri(requireNotNull(item.mediaPath))
-                EditedMediaItem.Builder(mediaItem).build()
-            }
-            val videoSequence = EditedMediaItemSequence(editedVideoItems)
-
-            val sequences = mutableListOf(videoSequence)
-            if (audioItems.isNotEmpty()) {
-                val editedAudio = audioItems.map { item ->
-                    EditedMediaItem.Builder(MediaItem.fromUri(requireNotNull(item.mediaPath))).build()
-                }
-                sequences.add(EditedMediaItemSequence(editedAudio))
+            val editedVideo = plan.video.map { buildEditedItem(it) }
+            val sequences = mutableListOf(
+                EditedMediaItemSequence(editedVideo)
+            )
+            if (plan.audio.isNotEmpty()) {
+                sequences.add(EditedMediaItemSequence(plan.audio.map { buildEditedItem(it) }))
             }
 
             val composition = Composition.Builder(sequences).build()
 
-            val result = transform(composition, outFile.absolutePath)
-            if (result != null) {
-                fail(task.id, result)
+            val transformError = transform(composition, outFile.absolutePath)
+            if (transformError != null) {
+                fail(task.id, transformError)
                 return
             }
 
-            // Validate output
             onProgress(ExportProgress.Stage("validating", "Checking output file"))
             if (!outFile.exists() || outFile.length() < 1000L) {
                 fail(task.id, "Export finished but output file is missing or too small.")
@@ -185,16 +197,62 @@ class ExportEngine @Inject constructor(
     }
 
     /**
-     * Runs Media3 Transformer and suspends until completion.
-     * Returns an error message on failure, null on success.
+     * Applies source in/out via ClippingConfiguration and volume via a channel-mix gain.
      */
+    private fun buildEditedItem(clip: ExportTimelinePlanner.PlannedClip): EditedMediaItem {
+        val (clipStart, clipEnd) = ExportTimelinePlanner.clippingFor(clip)
+        val clippingBuilder = MediaItem.ClippingConfiguration.Builder()
+            .setStartPositionMs(clipStart)
+        if (clipEnd != null) {
+            clippingBuilder.setEndPositionMs(clipEnd)
+        }
+        val mediaItem = MediaItem.Builder()
+            .setUri(clip.mediaPath)
+            .setClippingConfiguration(clippingBuilder.build())
+            .build()
+
+        val builder = EditedMediaItem.Builder(mediaItem)
+        if (clip.volume < 0.999f) {
+            builder.setEffects(
+                Effects(
+                    /* videoEffects = */ emptyList(),
+                    /* audioProcessors = */ listOf(volumeProcessor(clip.volume))
+                )
+            )
+        }
+        return builder.build()
+    }
+
+    /**
+     * Constant-gain channel mixer. Works for mono/stereo input once configured
+     * by the transformer pipeline when formats become available.
+     */
+    private fun volumeProcessor(volume: Float): AudioProcessor {
+        val gain = volume.coerceIn(0f, 1f)
+        val processor = ChannelMixingAudioProcessor()
+        // Pre-register common channel counts with a constant-gain diagonal matrix.
+        for (channels in 1..8) {
+            val coeffs = FloatArray(channels * channels)
+            for (i in 0 until channels) {
+                coeffs[i * channels + i] = gain
+            }
+            processor.putChannelMixingMatrix(
+                ChannelMixingMatrix(channels, channels, coeffs)
+            )
+        }
+        return processor
+    }
+
     private suspend fun transform(composition: Composition, outputPath: String): String? =
         suspendCancellableCoroutine { cont ->
             val transformer = Transformer.Builder(context)
                 .setVideoMimeType(MimeTypes.VIDEO_H264)
                 .setAudioMimeType(MimeTypes.AUDIO_AAC)
                 .addListener(object : Transformer.Listener {
-                    override fun onCompleted(composition: Composition, exportResult: androidx.media3.transformer.ExportResult) {
+                    override fun onCompleted(
+                        composition: Composition,
+                        exportResult: androidx.media3.transformer.ExportResult
+                    ) {
                         if (cont.isActive) cont.resume(null)
                     }
 

@@ -99,6 +99,7 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.transformer)
+    implementation(libs.androidx.media3.effect)
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
