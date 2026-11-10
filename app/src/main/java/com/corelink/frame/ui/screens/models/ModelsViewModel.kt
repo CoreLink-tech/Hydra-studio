@@ -50,7 +50,7 @@ class ModelsViewModel @Inject constructor(
         hardwarePreferences.lastProfile,
         refresh
     ) { installs, profile, _ ->
-        val ram = profile?.totalRamGb ?: 4f
+        val ram = profile?.minRamGb?.takeIf { it > 0f } ?: 4f
         val rows = ModelCatalogue.all.map { meta ->
             val install = installs[meta.id] ?: ModelInstallState(meta.id, InstallState.NOT_PRESENT)
             val recommended = meta.minRamGbRecommended <= ram + 0.3f &&
