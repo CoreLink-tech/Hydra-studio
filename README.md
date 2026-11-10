@@ -2,7 +2,7 @@
 
 **Native Android application** for offline AI video generation and film production.
 
-> Current status: **Milestone 1 — Project Foundation** (in progress)
+> Current status: **Milestone 3 — AI Model Research + PoC scaffolding**
 
 ## What is FRAME?
 
@@ -48,7 +48,9 @@ Colours taken directly from the HTML prototype:
 
 ## Development Milestones
 
-1. **Project Foundation** ← current
+1. **Project Foundation** — done
+2. **Hardware Assessment** — done
+3. **AI Model Research + Proof of Concept** ← current
 2. Hardware Assessment
 3. AI Model Research + Proof of Concept (actual inference)
 4. Generation Engine
