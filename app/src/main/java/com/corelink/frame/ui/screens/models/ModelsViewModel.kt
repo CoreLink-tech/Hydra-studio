@@ -70,21 +70,22 @@ class ModelsViewModel @Inject constructor(
     private val progress = MutableStateFlow<Map<String, Triple<String, Long, Long>>>(emptyMap())
     private val pendingLarge = MutableStateFlow<Pair<String, Long>?>(null)
 
+    private data class AuxState(
+        val message: String?,
+        val progress: Map<String, Triple<String, Long, Long>>,
+        val pending: Pair<String, Long>?
+    )
+
+    private val aux = combine(message, progress, pendingLarge) { msg, prog, pending ->
+        AuxState(msg, prog, pending)
+    }
+
     val uiState: StateFlow<ModelsUiState> = combine(
         downloadManager.installStates,
         hardwarePreferences.lastProfile,
         refresh,
-        message,
-        progress,
-        pendingLarge
-    ) { values ->
-        @Suppress("UNCHECKED_CAST")
-        val installs = values[0] as Map<String, ModelInstallState>
-        val profile = values[1] as com.corelink.frame.hardware.HardwareProfile?
-        val msg = values[3] as String?
-        val prog = values[4] as Map<String, Triple<String, Long, Long>>
-        val pending = values[5] as Pair<String, Long>?
-
+        aux
+    ) { installs, profile, _, auxState ->
         val ram = profile?.minRamGb?.takeIf { it > 0f } ?: 4f
         val rows = ModelCatalogue.all.map { meta ->
             val install = installs[meta.id] ?: ModelInstallState(meta.id, InstallState.NOT_PRESENT)
@@ -101,7 +102,7 @@ class ModelsViewModel @Inject constructor(
                     "Experimental — limited device testing"
                 else -> null
             }
-            val p = prog[meta.id]
+            val p = auxState.progress[meta.id]
             ModelRow(
                 meta = meta,
                 install = install,
@@ -116,10 +117,10 @@ class ModelsViewModel @Inject constructor(
             rows = rows,
             storageUsedBytes = fileManager.usedBytes(),
             profileName = profile?.displayName,
-            message = msg,
+            message = auxState.message,
             wifiOnly = downloadManager.wifiOnly,
-            pendingLargeConfirmId = pending?.first,
-            pendingLargeConfirmBytes = pending?.second ?: 0L
+            pendingLargeConfirmId = auxState.pending?.first,
+            pendingLargeConfirmBytes = auxState.pending?.second ?: 0L
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ModelsUiState())
 
