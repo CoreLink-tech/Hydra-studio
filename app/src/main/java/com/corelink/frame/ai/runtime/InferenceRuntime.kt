@@ -37,6 +37,7 @@ interface InferenceSession : AutoCloseable {
 
 /**
  * Minimal tensor carrier. Keeps the AI layer free of specific runtime types.
+ * [data] is a direct ByteBuffer in native byte order holding tightly packed elements.
  */
 data class TensorData(
     val shape: LongArray,
@@ -61,5 +62,15 @@ enum class TensorDataType {
     FLOAT16,
     INT8,
     INT32,
+    INT64,
     UINT8
+}
+
+/** Bytes per element for buffer sizing. */
+fun TensorDataType.bytesPerElement(): Int = when (this) {
+    TensorDataType.FLOAT32 -> 4
+    TensorDataType.FLOAT16 -> 2
+    TensorDataType.INT8, TensorDataType.UINT8 -> 1
+    TensorDataType.INT32 -> 4
+    TensorDataType.INT64 -> 8
 }
