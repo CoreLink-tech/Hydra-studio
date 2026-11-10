@@ -8,6 +8,7 @@ import com.corelink.frame.ai.download.DownloadEvent
 import com.corelink.frame.ai.download.DownloadFailure
 import com.corelink.frame.ai.download.Integrity
 import com.corelink.frame.ai.download.ModelDownloadManager
+import com.corelink.frame.ai.download.ModelSmokeTester
 import com.corelink.frame.ai.models.InstallState
 import com.corelink.frame.ai.models.ModelCatalogue
 import com.corelink.frame.ai.models.ModelInstallState
@@ -54,7 +55,10 @@ data class ModelsUiState(
     val wifiOnly: Boolean = true,
     /** When non-null, UI should ask the user to confirm a large download. */
     val pendingLargeConfirmId: String? = null,
-    val pendingLargeConfirmBytes: Long = 0L
+    val pendingLargeConfirmBytes: Long = 0L,
+    val smokeRunning: Boolean = false,
+    val lastSmokeReport: ModelSmokeTester.SmokeReport? = null,
+    val canMarkExperimental: Boolean = false
 )
 
 @HiltViewModel
@@ -62,6 +66,7 @@ class ModelsViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val downloadManager: ModelDownloadManager,
     private val fileManager: FrameFileManager,
+    private val smokeTester: ModelSmokeTester,
     hardwarePreferences: HardwarePreferences
 ) : ViewModel() {
 
@@ -69,6 +74,8 @@ class ModelsViewModel @Inject constructor(
     private val message = MutableStateFlow<String?>(null)
     private val progress = MutableStateFlow<Map<String, Triple<String, Long, Long>>>(emptyMap())
     private val pendingLarge = MutableStateFlow<Pair<String, Long>?>(null)
+    private val smokeRunning = MutableStateFlow(false)
+    private val lastSmoke = MutableStateFlow<ModelSmokeTester.SmokeReport?>(null)
 
     private data class AuxState(
         val message: String?,
@@ -76,16 +83,25 @@ class ModelsViewModel @Inject constructor(
         val pending: Pair<String, Long>?
     )
 
+    private data class SmokeAux(
+        val running: Boolean,
+        val report: ModelSmokeTester.SmokeReport?
+    )
+
     private val aux = combine(message, progress, pendingLarge) { msg, prog, pending ->
         AuxState(msg, prog, pending)
+    }
+    private val smokeAux = combine(smokeRunning, lastSmoke) { running, report ->
+        SmokeAux(running, report)
     }
 
     val uiState: StateFlow<ModelsUiState> = combine(
         downloadManager.installStates,
         hardwarePreferences.lastProfile,
         refresh,
-        aux
-    ) { installs, profile, _, auxState ->
+        aux,
+        smokeAux
+    ) { installs, profile, _, auxState, smoke ->
         val ram = profile?.minRamGb?.takeIf { it > 0f } ?: 4f
         val rows = ModelCatalogue.all.map { meta ->
             val install = installs[meta.id] ?: ModelInstallState(meta.id, InstallState.NOT_PRESENT)
@@ -120,7 +136,10 @@ class ModelsViewModel @Inject constructor(
             message = auxState.message,
             wifiOnly = downloadManager.wifiOnly,
             pendingLargeConfirmId = auxState.pending?.first,
-            pendingLargeConfirmBytes = auxState.pending?.second ?: 0L
+            pendingLargeConfirmBytes = auxState.pending?.second ?: 0L,
+            smokeRunning = smoke.running,
+            lastSmokeReport = smoke.report,
+            canMarkExperimental = smoke.report?.passed == true
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ModelsUiState())
 
@@ -362,6 +381,50 @@ class ModelsViewModel @Inject constructor(
             refreshLocal()
             message.value = "Cache cleared"
         }
+    }
+
+    fun runSmokeTest(modelId: String) {
+        viewModelScope.launch {
+            val meta = ModelCatalogue.byId(modelId) ?: return@launch
+            smokeRunning.value = true
+            message.value = "Smoke test running for ${meta.displayName}…"
+            try {
+                val report = smokeTester.run(meta, manifest = null)
+                lastSmoke.value = report
+                message.value = if (report.passed) {
+                    "Smoke PASS for ${meta.id} (still not a quality validation)"
+                } else {
+                    "Smoke FAIL for ${meta.id}: ${report.blockedReason ?: report.graphs.firstOrNull { !it.passed }?.error ?: "see report"}"
+                }
+            } catch (t: Throwable) {
+                message.value = "Smoke test crashed: ${t.message}"
+                lastSmoke.value = null
+            } finally {
+                smokeRunning.value = false
+                refresh.update { it + 1 }
+            }
+        }
+    }
+
+    fun dismissSmokeReport() {
+        lastSmoke.value = null
+    }
+
+    /**
+     * After a full smoke PASS the UI may offer EXPERIMENTAL only.
+     * VALIDATED is never set here — that requires measured end-to-end MP4 on device.
+     */
+    fun markExperimentalHint(modelId: String) {
+        val report = lastSmoke.value
+        if (report == null || !report.passed || report.modelId != modelId) {
+            message.value = "Mark EXPERIMENTAL only after a full smoke PASS for this model"
+            return
+        }
+        // Catalogue is static RESEARCH entries; we only surface a message.
+        // Changing status would require a mutable overlay store (future step).
+        message.value =
+            "Smoke passed for $modelId. Status remains RESEARCH in catalogue until a mutable " +
+                "status store is added. Do NOT claim VALIDATED. Treat as EXPERIMENTAL for your own notes."
     }
 
     private fun queryDisplayName(uri: Uri): String? {

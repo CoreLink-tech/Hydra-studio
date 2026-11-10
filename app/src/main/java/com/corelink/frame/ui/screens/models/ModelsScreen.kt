@@ -251,7 +251,9 @@ private fun ModelDetailCard(
     row: ModelRow,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
-    onImport: () -> Unit
+    onImport: () -> Unit,
+    onSmokeTest: () -> Unit,
+    smokeRunning: Boolean
 ) {
     val meta = row.meta
     val statusColor = when (meta.status) {
@@ -361,6 +363,114 @@ private fun ModelDetailCard(
             TextButton(onClick = onImport) {
                 Text("Import files", color = Accent, fontSize = 13.sp)
             }
+            val canTest = row.install.state == InstallState.INSTALLED ||
+                row.install.state == InstallState.PARTIAL
+            if (canTest) {
+                TextButton(onClick = onSmokeTest, enabled = !smokeRunning) {
+                    Text(
+                        if (smokeRunning) "Testing…" else "Test model",
+                        color = if (smokeRunning) TextMuted else Accent,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SmokeReportCard(
+    report: com.corelink.frame.ai.download.ModelSmokeTester.SmokeReport,
+    canMarkExperimental: Boolean,
+    onDismiss: () -> Unit,
+    onMarkExperimental: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+        as android.content.ClipboardManager
+    val createDoc = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(report.toJson().toByteArray(Charsets.UTF_8))
+                }
+            } catch (_: Exception) { /* ignore */ }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Panel, RoundedCornerShape(10.dp))
+            .border(1.dp, if (report.passed) Success else Danger, RoundedCornerShape(10.dp))
+            .padding(14.dp)
+    ) {
+        Text(report.header, color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "model=${report.modelId}  ${if (report.passed) "PASS" else "FAIL"}  install=${report.installState}",
+            color = TextPrimary,
+            fontSize = 13.sp
+        )
+        report.blockedReason?.let {
+            Text("blocked: $it", color = Danger, fontSize = 12.sp)
+        }
+        Text(
+            "thermal ${report.thermalBefore} → ${report.thermalAfter}",
+            color = TextSecondary,
+            fontSize = 12.sp
+        )
+        Text(
+            "pssKb ${report.pssKbBefore} → ${report.pssKbAfter}  nativeHeapKb ${report.nativeHeapKbBefore} → ${report.nativeHeapKbAfter}",
+            color = TextSecondary,
+            fontSize = 12.sp
+        )
+        report.graphs.forEach { g ->
+            Text(
+                "${g.file}: ${if (g.passed) "PASS" else "FAIL"} load=${g.loadMs}ms run=${g.runMs}ms" +
+                    (g.error?.let { " · $it" } ?: ""),
+                color = if (g.passed) Success else Danger,
+                fontSize = 12.sp
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row {
+            TextButton(onClick = {
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TEXT, report.toShortText())
+                }
+                context.startActivity(android.content.Intent.createChooser(send, "Share smoke report"))
+            }) {
+                Text("Share", color = Accent, fontSize = 13.sp)
+            }
+            TextButton(onClick = {
+                clipboard.setPrimaryClip(
+                    android.content.ClipData.newPlainText("FRAME smoke report", report.toShortText())
+                )
+            }) {
+                Text("Copy", color = Accent, fontSize = 13.sp)
+            }
+            TextButton(onClick = {
+                createDoc.launch("frame-smoke-${report.modelId}.json")
+            }) {
+                Text("Save", color = Accent, fontSize = 13.sp)
+            }
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss", color = TextMuted, fontSize = 13.sp)
+            }
+        }
+        if (canMarkExperimental) {
+            TextButton(onClick = onMarkExperimental) {
+                Text("Mark as EXPERIMENTAL (notes only)", color = Accent, fontSize = 12.sp)
+            }
+            Text(
+                "VALIDATED is never set from a smoke test.",
+                color = TextMuted,
+                fontSize = 11.sp
+            )
         }
     }
 }
