@@ -110,7 +110,11 @@ dependencies {
     // ONNX Runtime Mobile — primary inference engine for Milestone 3+
     implementation(libs.onnxruntime.android)
 
+    // OkHttp — resumable model downloads
+    implementation(libs.okhttp)
+
     // Unit tests
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation(libs.okhttp.mockwebserver)
 }
