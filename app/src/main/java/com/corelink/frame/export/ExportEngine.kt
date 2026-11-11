@@ -7,10 +7,10 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.audio.ChannelMixingAudioProcessor
 import androidx.media3.common.audio.ChannelMixingMatrix
 import androidx.media3.common.audio.AudioProcessor
-import androidx.media3.effect.Effects
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
+import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.Transformer
 import com.corelink.frame.core.files.FrameFileManager
@@ -215,8 +215,8 @@ class ExportEngine @Inject constructor(
         if (clip.volume < 0.999f) {
             builder.setEffects(
                 Effects(
-                    /* videoEffects = */ emptyList(),
-                    /* audioProcessors = */ listOf(volumeProcessor(clip.volume))
+                    /* audioProcessors = */ listOf(volumeProcessor(clip.volume)),
+                    /* videoEffects = */ emptyList()
                 )
             )
         }
