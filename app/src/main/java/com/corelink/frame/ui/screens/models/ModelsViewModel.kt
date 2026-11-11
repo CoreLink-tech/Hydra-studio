@@ -428,7 +428,7 @@ class ModelsViewModel @Inject constructor(
     }
 
     /**
-     * Debug-only: copy assets/test_fixture/* into FRAME/Models/frame_test_fixture/
+     * Debug-only: copy assets/test_fixture/ contents into FRAME/Models/frame_test_fixture/
      * and refresh install state. No file picker required.
      */
     fun installTestFixtureFromAssets() {
