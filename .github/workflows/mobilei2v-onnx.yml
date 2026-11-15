@@ -1,0 +1,149 @@
+name: MobileI2V ONNX feasibility
+
+# Research workflow. Exports the MobileI2V diffusion transformer to ONNX with the REAL
+# official checkpoint, checks it against PyTorch on CPU, and reports whether the
+# checkpoint matches the code. It does not touch the Android app.
+
+on:
+  push:
+    branches: [poc/mobilei2v-onnx]
+    paths:
+      - "tools/mobilei2v_export/**"
+      - ".github/workflows/mobilei2v-onnx.yml"
+  workflow_dispatch:
+    inputs:
+      height:
+        description: "Video height in pixels (multiple of 32 is cleanest)"
+        default: "352"
+      width:
+        description: "Video width in pixels"
+        default: "640"
+      upload_onnx:
+        description: "Upload the ~1 GB .onnx file as an artifact"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  # Pinned so the run is reproducible. Bump deliberately.
+  MOBILEI2V_REPO: hustvl/MobileI2V
+  MOBILEI2V_SHA: 8d0a253c766b05a43ba408baf5e8f800a36be8b4
+  HF_REPO: hustvl/MobileI2V
+  HF_FILE: hybrid_371.pth
+  HEIGHT: ${{ inputs.height || '352' }}
+  WIDTH: ${{ inputs.width || '640' }}
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout MobileI2V (pinned commit)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.MOBILEI2V_REPO }}
+          ref: ${{ env.MOBILEI2V_SHA }}
+          path: MobileI2V
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Add swap (the exporter peaks near 6 GB RAM)
+        run: |
+          free -m
+          sudo fallocate -l 12G /swapfile2
+          sudo chmod 600 /swapfile2
+          sudo mkswap /swapfile2
+          sudo swapon /swapfile2
+          free -m
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu \
+            || pip install torch==2.15.0
+          pip install -r tools/mobilei2v_export/requirements.txt
+          python -c "import torch, onnxruntime; print('torch', torch.__version__, '| ort', onnxruntime.__version__)"
+
+      - name: Download official checkpoint
+        run: |
+          python - <<'EOF'
+          import hashlib, os
+          from huggingface_hub import hf_hub_download, list_repo_files
+
+          repo, want = os.environ["HF_REPO"], os.environ["HF_FILE"]
+          files = list_repo_files(repo)
+          print("Files in", repo, ":", files)
+          if want not in files:
+              raise SystemExit(f"Expected file {want!r} not found. Update HF_FILE using the list above.")
+          path = hf_hub_download(repo, want, local_dir="weights")
+          h = hashlib.sha256()
+          with open(path, "rb") as f:
+              for chunk in iter(lambda: f.read(1 << 20), b""):
+                  h.update(chunk)
+          print("checkpoint:", path, os.path.getsize(path), "bytes")
+          print("sha256:", h.hexdigest())
+          open("weights/checkpoint.sha256", "w").write(h.hexdigest())
+          EOF
+
+      - name: Export DiT to ONNX and validate on CPU
+        run: |
+          python tools/mobilei2v_export/export_dit.py \
+            --repo MobileI2V \
+            --weights "weights/${HF_FILE}" \
+            --out out \
+            --height "$HEIGHT" --width "$WIDTH"
+
+      - name: Summarise results
+        if: always()
+        run: |
+          python - <<'EOF'
+          import glob, json, os
+          out = []
+          files = glob.glob("out/summary_*.json")
+          if not files:
+              out.append("## No summary produced. The export step failed, see its log.")
+          for p in files:
+              d = json.load(open(p))
+              w = d["weights"]
+              mism = w.get("missing_count", 0) + w.get("unexpected_count", 0) if isinstance(w, dict) else -1
+              out += [
+                  f"## MobileI2V DiT export ({os.path.basename(p)})",
+                  f"- Checkpoint sha256: `{open('weights/checkpoint.sha256').read() if os.path.exists('weights/checkpoint.sha256') else 'n/a'}`",
+                  f"- Checkpoint vs code: missing keys **{w.get('missing_count')}**, unexpected keys **{w.get('unexpected_count')}**"
+                  + ("  -> MATCHES" if mism == 0 else "  -> MISMATCH, results below are NOT trustworthy"),
+                  f"- Sample missing: `{w.get('missing_keys')}`",
+                  f"- Sample unexpected: `{w.get('unexpected_keys')}`",
+                  f"- Text conditioning reaches the graph: **{d.get('text_conditioning_reaches_graph')}** (blocks with text cross-attn: {d.get('blocks_with_text_cross_attn')})",
+                  f"- ONNX size: {d['onnx_mb']} MB, params: {d['params_millions']} M",
+                  f"- ONNX Runtime vs PyTorch max diff: `{d['numeric_checks_onnx_vs_pytorch']}`",
+                  f"- One forward pass on this runner ({d['cpu_threads_used']} threads): {d['one_forward_pass_seconds_this_machine']} s",
+                  f"- Source patches applied: `{d['source_patches']}`",
+                  "",
+                  "_Timing is for a GitHub runner CPU, not a phone. Real weights, DiT only. No video was produced._",
+              ]
+          text = "\n".join(out)
+          print(text)
+          open(os.environ["GITHUB_STEP_SUMMARY"], "a").write(text + "\n")
+          EOF
+
+      - name: Upload summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobilei2v-summary
+          path: out/summary_*.json
+          if-no-files-found: warn
+
+      - name: Upload ONNX model (optional)
+        if: ${{ inputs.upload_onnx }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobilei2v-dit-onnx
+          path: out/*.onnx
+          retention-days: 3
