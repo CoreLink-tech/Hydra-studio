@@ -1,28 +1,42 @@
-# MobileI2V -> ONNX feasibility test (research tooling, not part of the app)
+# MobileI2V → ONNX feasibility (research tooling, not part of the app)
 
-Question this answers: can the MobileI2V diffusion transformer be exported to ONNX and run
-on CPU with ONNX Runtime, and does the official checkpoint actually fit the code?
+Answers: can MobileI2V components export to ONNX and run on CPU with ONNX Runtime,
+and do the official weights fit the code?
 
-Scope today: **the DiT only.** The text encoder (Qwen2-0.5B), the LTX image encoder and the
-Turbo-VAED decoder are NOT converted yet. Nothing here produces a video.
+## Components
 
-## Run it
-GitHub -> Actions -> "MobileI2V ONNX feasibility" -> Run workflow (or push to this branch).
-Read the run's Summary page. The ONNX file is only uploaded if you tick `upload_onnx`.
+| Script | Component | Weights |
+|--------|-----------|---------|
+| `export_dit.py` | Diffusion transformer (267M) | `hustvl/MobileI2V` → `hybrid_371.pth` |
+| `export_vae_decoder.py` | Turbo-VAED mobile decoder | `hustvl/Turbo-VAED` → `Turbo-VAED-LTX.pth` |
+| `export_image_encoder.py` | LTX VAE encoder (single frame) | `Lightricks/LTX-Video` → `vae/` |
 
-## Verified locally (random weights, graph mechanics only)
-- Export works. ONNX Runtime output matches PyTorch within 4e-6.
-- Wrapper output equals the unmodified official forward pass at 720x1280 (diff 0.0).
-- 352x640, 17 frames: 1.7 s per forward pass on 2 CPU threads (x86 server, NOT a phone).
-- All 16 blocks lack a text cross-attention layer, so the prompt cannot affect the output.
+## Run
 
-## NOT verified until the workflow runs with real weights
-- That the official checkpoint loads without missing/unexpected keys.
-- Anything about output quality.
+GitHub → Actions → **MobileI2V ONNX feasibility** → Run workflow (or push to `poc/mobilei2v-onnx`).
 
-## Deliberate deviations from the official code (all printed in summary.json)
-1. Hardcoded `.half()` in attention replaced by the tensor's own dtype (GPU-only cast).
-2. Rotary grid forced to the real latent size (official code picks it from a fixed list).
-3. Token count derived from latent size (official code hardcodes 2760).
-4. Guidance is not inside the graph; the app would run it twice and combine.
-5. Triton/mmcv stubbed. They are training/GPU-only and not used by this config.
+Three parallel jobs + a summarise job. Read the run Summary page. ONNX files upload only if `upload_onnx` is ticked.
+
+## Findings so far (DiT, real weights, 352×640)
+
+- Export works. ORT matches PyTorch (~5e-6).
+- Official checkpoint loads; only `pos_embed` is shape-skipped at non-720p (expected).
+- **No text cross-attention** in any of the 16 blocks (`SanaBlock_cross` / `SanaBlock_vanila` have it commented out). Prompt does not condition the DiT. ONNX graph has no `text_embeds` input.
+- ~1.16 s / DiT forward on a 4-thread GitHub runner CPU (not a phone).
+- DiT ONNX ~1061 MB.
+
+## Product implication
+
+- I2V = image latent only (plus timestep / flow score).
+- T2V = text → first frame (small T2I) then I2V; on-device Qwen text encoder is optional for motion.
+
+## Not done yet
+
+- End-to-end sample video on CPU
+- Phone timing / quality
+- Android integration
+
+## Local notes
+
+- DiT export peaks ~6 GB RAM (workflow adds swap).
+- Height/width should be multiples of 32; frames = 1+8k (17 default).

@@ -1,8 +1,12 @@
 name: MobileI2V ONNX feasibility
 
-# Research workflow. Exports the MobileI2V diffusion transformer to ONNX with the REAL
-# official checkpoint, checks it against PyTorch on CPU, and reports whether the
-# checkpoint matches the code. It does not touch the Android app.
+# Research workflow. Exports MobileI2V pieces to ONNX with real weights and checks
+# them on CPU with ONNX Runtime. Does not touch the Android app.
+#
+# Jobs:
+#   export-dit          — diffusion transformer (hybrid_371.pth)
+#   export-vae-decoder  — Turbo-VAED-LTX mobile decoder
+#   export-image-encoder— LTX-Video VAE encoder (single-frame condition image)
 
 on:
   push:
@@ -13,13 +17,16 @@ on:
   workflow_dispatch:
     inputs:
       height:
-        description: "Video height in pixels (multiple of 32 is cleanest)"
+        description: "Video height in pixels (multiple of 32)"
         default: "352"
       width:
         description: "Video width in pixels"
         default: "640"
+      frames:
+        description: "Frame count (1+8k)"
+        default: "17"
       upload_onnx:
-        description: "Upload the ~1 GB .onnx file as an artifact"
+        description: "Upload ONNX artifacts (large)"
         type: boolean
         default: false
 
@@ -27,16 +34,19 @@ permissions:
   contents: read
 
 env:
-  # Pinned so the run is reproducible. Bump deliberately.
   MOBILEI2V_REPO: hustvl/MobileI2V
   MOBILEI2V_SHA: 8d0a253c766b05a43ba408baf5e8f800a36be8b4
   HF_REPO: hustvl/MobileI2V
   HF_FILE: hybrid_371.pth
+  TURBO_VAED_REPO: hustvl/Turbo-VAED
+  TURBO_VAED_FILE: Turbo-VAED-LTX.pth
+  LTX_VAE_REPO: Lightricks/LTX-Video
   HEIGHT: ${{ inputs.height || '352' }}
   WIDTH: ${{ inputs.width || '640' }}
+  FRAMES: ${{ inputs.frames || '17' }}
 
 jobs:
-  export:
+  export-dit:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -53,13 +63,10 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Add swap (the exporter peaks near 6 GB RAM)
+      - name: Add swap
         run: |
-          free -m
-          sudo fallocate -l 12G /swapfile2
-          sudo chmod 600 /swapfile2
-          sudo mkswap /swapfile2
-          sudo swapon /swapfile2
+          sudo fallocate -l 12G /swapfile2 && sudo chmod 600 /swapfile2
+          sudo mkswap /swapfile2 && sudo swapon /swapfile2
           free -m
 
       - name: Install dependencies
@@ -70,28 +77,26 @@ jobs:
           pip install -r tools/mobilei2v_export/requirements.txt
           python -c "import torch, onnxruntime; print('torch', torch.__version__, '| ort', onnxruntime.__version__)"
 
-      - name: Download official checkpoint
+      - name: Download DiT checkpoint
         run: |
           python - <<'EOF'
           import hashlib, os
           from huggingface_hub import hf_hub_download, list_repo_files
-
           repo, want = os.environ["HF_REPO"], os.environ["HF_FILE"]
           files = list_repo_files(repo)
           print("Files in", repo, ":", files)
           if want not in files:
-              raise SystemExit(f"Expected file {want!r} not found. Update HF_FILE using the list above.")
+              raise SystemExit(f"Expected file {want!r} not found")
           path = hf_hub_download(repo, want, local_dir="weights")
           h = hashlib.sha256()
           with open(path, "rb") as f:
               for chunk in iter(lambda: f.read(1 << 20), b""):
                   h.update(chunk)
-          print("checkpoint:", path, os.path.getsize(path), "bytes")
           print("sha256:", h.hexdigest())
-          open("weights/checkpoint.sha256", "w").write(h.hexdigest())
+          open("weights/dit.sha256", "w").write(h.hexdigest())
           EOF
 
-      - name: Export DiT to ONNX and validate on CPU
+      - name: Export DiT to ONNX
         run: |
           python tools/mobilei2v_export/export_dit.py \
             --repo MobileI2V \
@@ -99,57 +104,208 @@ jobs:
             --out out \
             --height "$HEIGHT" --width "$WIDTH"
 
-      - name: Summarise results
-        if: always()
-        run: |
-          python - <<'EOF'
-          import glob, json, os
-          out = []
-          files = glob.glob("out/summary_*.json")
-          if not files:
-              out.append("## No summary produced. The export step failed, see its log.")
-          for p in files:
-              d = json.load(open(p))
-              w = d["weights"] if isinstance(d.get("weights"), dict) else {}
-              mism = w.get("missing_count", 0) + w.get("unexpected_count", 0)
-              shape_n = w.get("shape_mismatch_count", 0)
-              # Shape skips (e.g. pos_embed at non-720p) are expected; only
-              # missing/unexpected keys indicate a real code↔checkpoint drift.
-              status = "MATCHES (shape-only skips are OK)" if mism == 0 else "MISMATCH, results below are NOT trustworthy"
-              out += [
-                  f"## MobileI2V DiT export ({os.path.basename(p)})",
-                  f"- Checkpoint sha256: `{open('weights/checkpoint.sha256').read().strip() if os.path.exists('weights/checkpoint.sha256') else 'n/a'}`",
-                  f"- Latent HxW / tokens: `{w.get('latent_hw')}` / **{w.get('token_count')}**",
-                  f"- Checkpoint vs code: missing **{w.get('missing_count')}**, unexpected **{w.get('unexpected_count')}**, shape-skipped **{shape_n}**  -> {status}",
-                  f"- Shape-skipped sample: `{w.get('shape_mismatched_keys_skipped')}`",
-                  f"- Sample missing: `{w.get('missing_keys')}`",
-                  f"- Sample unexpected: `{w.get('unexpected_keys')}`",
-                  f"- Text conditioning reaches the graph: **{d.get('text_conditioning_reaches_graph')}** (blocks with text cross-attn: {d.get('blocks_with_text_cross_attn')})",
-                  f"- ONNX size: {d.get('onnx_mb')} MB, params: {d.get('params_millions')} M",
-                  f"- ONNX Runtime vs PyTorch max diff: `{d.get('numeric_checks_onnx_vs_pytorch')}`",
-                  f"- One forward pass on this runner ({d.get('cpu_threads_used')} threads): {d.get('one_forward_pass_seconds_this_machine')} s",
-                  f"- Source patches applied: `{d.get('source_patches')}`",
-                  "",
-                  "_Timing is for a GitHub runner CPU, not a phone. Real weights, DiT only. No video was produced._",
-                  "_Official checkpoint is 720x1280 (920 tokens). Other sizes skip resolution-tied tensors like pos_embed._",
-              ]
-          text = "\n".join(out)
-          print(text)
-          open(os.environ["GITHUB_STEP_SUMMARY"], "a").write(text + "\n")
-          EOF
-
-      - name: Upload summary
+      - name: Upload DiT summary
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mobilei2v-summary
+          name: summary-dit
           path: out/summary_*.json
           if-no-files-found: warn
 
-      - name: Upload ONNX model (optional)
+      - name: Upload DiT ONNX
         if: ${{ inputs.upload_onnx }}
         uses: actions/upload-artifact@v4
         with:
-          name: mobilei2v-dit-onnx
+          name: onnx-dit
           path: out/*.onnx
           retention-days: 3
+
+  export-vae-decoder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Add swap
+        run: |
+          sudo fallocate -l 8G /swapfile2 && sudo chmod 600 /swapfile2
+          sudo mkswap /swapfile2 && sudo swapon /swapfile2
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch==2.15.0 torchvision==0.29.2 --index-url https://download.pytorch.org/whl/cpu \
+            || pip install torch==2.15.0 torchvision==0.29.2
+          pip install -r tools/mobilei2v_export/requirements.txt
+
+      - name: Download Turbo-VAED-LTX weights
+        run: |
+          python - <<'EOF'
+          import hashlib, os
+          from huggingface_hub import hf_hub_download, list_repo_files
+          repo, want = os.environ["TURBO_VAED_REPO"], os.environ["TURBO_VAED_FILE"]
+          files = list_repo_files(repo)
+          print("Files in", repo, ":", files)
+          if want not in files:
+              # try case variants
+              matches = [f for f in files if f.lower().endswith("ltx.pth") or "Turbo-VAED-LTX" in f]
+              print("candidates:", matches)
+              if not matches:
+                  raise SystemExit(f"{want} not in repo")
+              want = matches[0]
+          path = hf_hub_download(repo, want, local_dir="weights")
+          h = hashlib.sha256()
+          with open(path, "rb") as f:
+              for chunk in iter(lambda: f.read(1 << 20), b""):
+                  h.update(chunk)
+          print("path", path, "sha256", h.hexdigest())
+          open("weights/turbo_vaed.sha256", "w").write(h.hexdigest())
+          open("weights/turbo_vaed.path", "w").write(path)
+          EOF
+
+      - name: Export Turbo-VAED decoder to ONNX
+        run: |
+          W=$(cat weights/turbo_vaed.path)
+          PYTHONPATH=tools/mobilei2v_export python tools/mobilei2v_export/export_vae_decoder.py \
+            --weights "$W" \
+            --out out \
+            --height "$HEIGHT" --width "$WIDTH" --frames "$FRAMES"
+
+      - name: Upload VAE decoder summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-vae-decoder
+          path: out/summary_*.json
+          if-no-files-found: warn
+
+      - name: Upload VAE decoder ONNX
+        if: ${{ inputs.upload_onnx }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: onnx-vae-decoder
+          path: out/*.onnx
+          retention-days: 3
+
+  export-image-encoder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Add swap
+        run: |
+          sudo fallocate -l 12G /swapfile2 && sudo chmod 600 /swapfile2
+          sudo mkswap /swapfile2 && sudo swapon /swapfile2
+          free -m
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch==2.15.0 torchvision==0.29.2 --index-url https://download.pytorch.org/whl/cpu \
+            || pip install torch==2.15.0 torchvision==0.29.2
+          pip install -r tools/mobilei2v_export/requirements.txt
+
+      - name: Download LTX-Video VAE
+        run: |
+          python - <<'EOF'
+          import os
+          from huggingface_hub import snapshot_download
+          path = snapshot_download(
+              os.environ["LTX_VAE_REPO"],
+              allow_patterns=["vae/*"],
+              local_dir="weights/ltx",
+          )
+          print("downloaded to", path)
+          import os as _os
+          for root, dirs, files in _os.walk("weights/ltx"):
+              for f in files:
+                  print(_os.path.join(root, f), _os.path.getsize(_os.path.join(root, f)))
+          EOF
+
+      - name: Export LTX image encoder to ONNX
+        run: |
+          # Prefer weights/ltx/vae if present, else weights/ltx
+          VAE_DIR=weights/ltx/vae
+          if [ ! -d "$VAE_DIR" ]; then VAE_DIR=weights/ltx; fi
+          ls -la "$VAE_DIR"
+          PYTHONPATH=tools/mobilei2v_export python tools/mobilei2v_export/export_image_encoder.py \
+            --vae-dir "$VAE_DIR" \
+            --out out \
+            --height "$HEIGHT" --width "$WIDTH" \
+            --scale-factor 0.41407
+
+      - name: Upload image encoder summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-image-encoder
+          path: out/summary_*.json
+          if-no-files-found: warn
+
+      - name: Upload image encoder ONNX
+        if: ${{ inputs.upload_onnx }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: onnx-image-encoder
+          path: out/*.onnx
+          retention-days: 3
+
+  summarise:
+    needs: [export-dit, export-vae-decoder, export-image-encoder]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: summary-*
+          merge-multiple: true
+
+      - name: Write job summary
+        run: |
+          python - <<'EOF'
+          import glob, json, os
+          files = sorted(glob.glob("artifacts/**/*.json", recursive=True))
+          lines = ["# MobileI2V ONNX feasibility (Step 3c)", ""]
+          if not files:
+              lines.append("No summary JSON artifacts found.")
+          for p in files:
+              d = json.load(open(p))
+              comp = d.get("component") or ("dit" if "params_millions" in d and "latent_shape" in d else "unknown")
+              lines.append(f"## {os.path.basename(p)} (`{comp}`)")
+              if "weights" in d and isinstance(d["weights"], dict):
+                  w = d["weights"]
+                  lines.append(f"- Weights: `{w.get('weights')}` missing={w.get('missing_count')} unexpected={w.get('unexpected_count')} shape_skip={w.get('shape_mismatch_count', 0)}")
+                  if w.get("shape_mismatched_keys_skipped"):
+                      lines.append(f"- Shape skips: `{w.get('shape_mismatched_keys_skipped')}`")
+              lines.append(f"- Params: **{d.get('params_millions')} M**")
+              if d.get("onnx_mb") is not None:
+                  lines.append(f"- ONNX: **{d.get('onnx_mb')} MB** `{d.get('onnx_file')}`")
+              if "text_conditioning_reaches_graph" in d:
+                  lines.append(f"- Text in graph: **{d.get('text_conditioning_reaches_graph')}** (cross-attn blocks: {d.get('blocks_with_text_cross_attn')})")
+              if "max_abs_diff_ort_vs_pytorch" in d:
+                  lines.append(f"- ORT vs PT max abs: `{d.get('max_abs_diff_ort_vs_pytorch')}`")
+              elif "numeric_checks_onnx_vs_pytorch" in d:
+                  lines.append(f"- ORT vs PT: `{d.get('numeric_checks_onnx_vs_pytorch')}`")
+              for k in ("one_forward_pass_seconds_this_machine", "one_decode_seconds_this_machine", "one_encode_seconds_this_machine"):
+                  if k in d:
+                      lines.append(f"- Timing ({k}): {d[k]} s  (threads={d.get('cpu_threads_used')})")
+              if "output_shape" in d:
+                  lines.append(f"- Output shape: `{d.get('output_shape')}`")
+              if "latent_shape" in d:
+                  lines.append(f"- Latent shape: `{d.get('latent_shape')}`")
+              lines.append("")
+          lines.append("_Server CPU timings only. No phone measurements. No end-to-end video produced yet._")
+          text = "\n".join(lines)
+          print(text)
+          open(os.environ["GITHUB_STEP_SUMMARY"], "a").write(text + "\n")
+          EOF
