@@ -171,6 +171,37 @@ def official_forward(model, x, ts, y, fs, T, H, W):
     return model(x, ts, None, y, cond, fs, mask=None)
 
 
+def safe_load(path, max_rounds=30):
+    """Load a checkpoint with weights_only=True (no arbitrary code execution).
+
+    Official checkpoints often carry numpy metadata that the safe loader rejects by
+    default. We allow numpy types ONLY, one at a time, as the loader reports them.
+    Any other kind of object stops the run so a human can decide.
+    """
+    import importlib
+    import pickle
+    import re
+
+    allowed = []
+    for _ in range(max_rounds):
+        try:
+            with torch.serialization.safe_globals(allowed):
+                return torch.load(path, map_location="cpu", weights_only=True), allowed
+        except pickle.UnpicklingError as e:
+            # PyTorch words this two ways depending on the object kind.
+            m = (re.search(r"Unsupported global: GLOBAL ([\w\.]+) was not an allowed global", str(e))
+                 or re.search(r"but got <class '([\w\.]+)'>", str(e)))
+            if not m:
+                raise
+            mod, _, name = m.group(1).rpartition(".")
+            if not (mod == "numpy" or mod.startswith("numpy.")):
+                raise RuntimeError(
+                    f"Checkpoint needs a non-numpy object ({m.group(1)}). Refusing to allow it "
+                    "automatically; inspect the file and decide.") from e
+            allowed.append(getattr(importlib.import_module(mod), name))
+    raise RuntimeError("Checkpoint needed too many allow-list rounds; stopping.")
+
+
 def build_model(repo, latent_h, latent_w, weights):
     stub_packages(repo)
     # Force the pure-PyTorch code path. The Triton kernels are CUDA-only and the
@@ -189,13 +220,17 @@ def build_model(repo, latent_h, latent_w, weights):
     )
     info = {"weights": "random (graph check only, NOT real model output)"}
     if weights != "random":
-        # weights_only=True refuses to unpickle arbitrary code. If the official file
-        # needs more than tensors this raises, and a human decides what to do.
-        ckpt = torch.load(weights, map_location="cpu", weights_only=True)
+        ckpt, allowed = safe_load(weights)
+        top_keys = list(ckpt.keys())[:20] if isinstance(ckpt, dict) else type(ckpt).__name__
         sd = ckpt.get("state_dict", ckpt)
         sd = {k.removeprefix("module."): v for k, v in sd.items()}
+        non_tensor = [k for k, v in sd.items() if not torch.is_tensor(v)]
+        sd = {k: v for k, v in sd.items() if torch.is_tensor(v)}
         res = model.load_state_dict(sd, strict=False)
         info = {
+            "checkpoint_top_level_keys": top_keys,
+            "non_tensor_entries_ignored": non_tensor[:20],
+            "numpy_globals_allowed": [f"{o.__module__}.{o.__name__}" for o in allowed],
             "weights": os.path.basename(weights),
             "missing_keys": list(res.missing_keys)[:20],
             "unexpected_keys": list(res.unexpected_keys)[:20],
