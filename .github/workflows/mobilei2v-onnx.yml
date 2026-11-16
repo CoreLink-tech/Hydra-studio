@@ -110,22 +110,28 @@ jobs:
               out.append("## No summary produced. The export step failed, see its log.")
           for p in files:
               d = json.load(open(p))
-              w = d["weights"]
-              mism = w.get("missing_count", 0) + w.get("unexpected_count", 0) if isinstance(w, dict) else -1
+              w = d["weights"] if isinstance(d.get("weights"), dict) else {}
+              mism = w.get("missing_count", 0) + w.get("unexpected_count", 0)
+              shape_n = w.get("shape_mismatch_count", 0)
+              # Shape skips (e.g. pos_embed at non-720p) are expected; only
+              # missing/unexpected keys indicate a real code↔checkpoint drift.
+              status = "MATCHES (shape-only skips are OK)" if mism == 0 else "MISMATCH, results below are NOT trustworthy"
               out += [
                   f"## MobileI2V DiT export ({os.path.basename(p)})",
-                  f"- Checkpoint sha256: `{open('weights/checkpoint.sha256').read() if os.path.exists('weights/checkpoint.sha256') else 'n/a'}`",
-                  f"- Checkpoint vs code: missing keys **{w.get('missing_count')}**, unexpected keys **{w.get('unexpected_count')}**"
-                  + ("  -> MATCHES" if mism == 0 else "  -> MISMATCH, results below are NOT trustworthy"),
+                  f"- Checkpoint sha256: `{open('weights/checkpoint.sha256').read().strip() if os.path.exists('weights/checkpoint.sha256') else 'n/a'}`",
+                  f"- Latent HxW / tokens: `{w.get('latent_hw')}` / **{w.get('token_count')}**",
+                  f"- Checkpoint vs code: missing **{w.get('missing_count')}**, unexpected **{w.get('unexpected_count')}**, shape-skipped **{shape_n}**  -> {status}",
+                  f"- Shape-skipped sample: `{w.get('shape_mismatched_keys_skipped')}`",
                   f"- Sample missing: `{w.get('missing_keys')}`",
                   f"- Sample unexpected: `{w.get('unexpected_keys')}`",
                   f"- Text conditioning reaches the graph: **{d.get('text_conditioning_reaches_graph')}** (blocks with text cross-attn: {d.get('blocks_with_text_cross_attn')})",
-                  f"- ONNX size: {d['onnx_mb']} MB, params: {d['params_millions']} M",
-                  f"- ONNX Runtime vs PyTorch max diff: `{d['numeric_checks_onnx_vs_pytorch']}`",
-                  f"- One forward pass on this runner ({d['cpu_threads_used']} threads): {d['one_forward_pass_seconds_this_machine']} s",
-                  f"- Source patches applied: `{d['source_patches']}`",
+                  f"- ONNX size: {d.get('onnx_mb')} MB, params: {d.get('params_millions')} M",
+                  f"- ONNX Runtime vs PyTorch max diff: `{d.get('numeric_checks_onnx_vs_pytorch')}`",
+                  f"- One forward pass on this runner ({d.get('cpu_threads_used')} threads): {d.get('one_forward_pass_seconds_this_machine')} s",
+                  f"- Source patches applied: `{d.get('source_patches')}`",
                   "",
                   "_Timing is for a GitHub runner CPU, not a phone. Real weights, DiT only. No video was produced._",
+                  "_Official checkpoint is 720x1280 (920 tokens). Other sizes skip resolution-tied tensors like pos_embed._",
               ]
           text = "\n".join(out)
           print(text)

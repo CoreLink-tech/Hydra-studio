@@ -226,16 +226,45 @@ def build_model(repo, latent_h, latent_w, weights):
         sd = {k.removeprefix("module."): v for k, v in sd.items()}
         non_tensor = [k for k, v in sd.items() if not torch.is_tensor(v)]
         sd = {k: v for k, v in sd.items() if torch.is_tensor(v)}
-        res = model.load_state_dict(sd, strict=False)
+
+        # Official hybrid_371.pth was trained at 720x1280 (latent 23x40 → 920
+        # tokens). Mobile target sizes (e.g. 352x640 → 11x20 → 220 tokens) make
+        # resolution-dependent tensors like pos_embed shape-mismatch. strict=False
+        # still raises on size mismatch for keys present in both, so drop those
+        # tensors and keep the rest. Model uses RoPE (use_pe=False); pos_embed is
+        # not required for a valid graph / weight check at other resolutions.
+        model_sd = model.state_dict()
+        shape_mismatch = []
+        filtered = {}
+        for k, v in sd.items():
+            if k in model_sd and tuple(model_sd[k].shape) != tuple(v.shape):
+                shape_mismatch.append({
+                    "key": k,
+                    "checkpoint": list(v.shape),
+                    "model": list(model_sd[k].shape),
+                })
+                continue
+            filtered[k] = v
+
+        res = model.load_state_dict(filtered, strict=False)
         info = {
             "checkpoint_top_level_keys": top_keys,
             "non_tensor_entries_ignored": non_tensor[:20],
             "numpy_globals_allowed": [f"{o.__module__}.{o.__name__}" for o in allowed],
             "weights": os.path.basename(weights),
+            "latent_hw": [latent_h, latent_w],
+            "token_count": latent_h * latent_w,
+            "shape_mismatched_keys_skipped": shape_mismatch,
+            "shape_mismatch_count": len(shape_mismatch),
             "missing_keys": list(res.missing_keys)[:20],
             "unexpected_keys": list(res.unexpected_keys)[:20],
             "missing_count": len(res.missing_keys),
             "unexpected_count": len(res.unexpected_keys),
+            "note": (
+                "Shape-mismatched tensors (usually pos_embed) were skipped so "
+                "mobile resolutions can load the 720x1280-trained checkpoint. "
+                "For bit-exact weight match use --height 720 --width 1280."
+            ),
         }
     return model.float().eval(), info
 
