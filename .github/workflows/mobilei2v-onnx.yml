@@ -10,7 +10,7 @@ name: MobileI2V ONNX feasibility
 
 on:
   push:
-    branches: [poc/mobilei2v-onnx]
+    branches: [poc/mobilei2v-onnx, main]
     paths:
       - "tools/mobilei2v_export/**"
       - ".github/workflows/mobilei2v-onnx.yml"
