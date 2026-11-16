@@ -46,6 +46,41 @@ def sha256(path):
     return h.hexdigest()
 
 
+def fix_onnx_transpose_perms(path: str) -> int:
+    """Rewrite negative axes in Transpose perm attributes to positive indices.
+
+    Legacy torch.onnx.export can emit perm={0,-1,1,2,3} from channel-last
+    reshapes inside LTX ResNet blocks. ONNX Runtime rejects negative perms.
+    """
+    import onnx
+    from onnx import helper
+
+    model = onnx.load(path)
+    fixed = 0
+    for node in model.graph.node:
+        if node.op_type != "Transpose":
+            continue
+        for attr in node.attribute:
+            if attr.name != "perm" or not attr.ints:
+                continue
+            perm = list(attr.ints)
+            rank = len(perm)
+            new_perm = [p + rank if p < 0 else p for p in perm]
+            if new_perm == perm:
+                continue
+            if sorted(new_perm) != list(range(rank)):
+                # Not a simple negative rewrite; leave alone
+                continue
+            del attr.ints[:]
+            attr.ints.extend(new_perm)
+            fixed += 1
+    if fixed:
+        # Clear value_info that may carry rank-0 placeholders from bad inference
+        del model.graph.value_info[:]
+        onnx.save(model, path)
+    return fixed
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--vae-dir", required=True, help="Path to LTX VAE (diffusers folder or HF cache)")
@@ -69,9 +104,23 @@ def main():
     wrapper = EncoderWrapper(vae, a.scale_factor).eval()
 
     torch.manual_seed(0)
-    image = torch.randn(1, 3, a.height, a.width)
+    # Export with explicit 5-D video tensor so the graph never invents
+    # unsqueeze/rank-ambiguous transposes at the boundary.
+    video = torch.randn(1, 3, 1, a.height, a.width)
+
+    class VideoEncoderWrapper(nn.Module):
+        def __init__(self, inner, scale):
+            super().__init__()
+            self.vae = inner.vae if hasattr(inner, "vae") else inner
+            self.scale_factor = scale
+
+        def forward(self, video_bcthw: torch.Tensor) -> torch.Tensor:
+            dist = self.vae.encode(video_bcthw).latent_dist
+            return dist.mode() * self.scale_factor
+
+    vwrap = VideoEncoderWrapper(wrapper, a.scale_factor).eval()
     with torch.no_grad():
-        ref = wrapper(image)
+        ref = vwrap(video)
     print(f"encoder out shape: {tuple(ref.shape)}")
 
     tag = f"{a.height}x{a.width}"
@@ -83,18 +132,48 @@ def main():
         opset_version=17,
         do_constant_folding=False,
     )
-    try:
-        torch.onnx.export(wrapper, image, path, dynamo=False, **kw)
-    except TypeError:
-        torch.onnx.export(wrapper, image, path, **kw)
+    # Prefer dynamo exporter when available; fall back to legacy.
+    exported = False
+    for dynamo in (True, False):
+        try:
+            torch.onnx.export(vwrap, video, path, dynamo=dynamo, **kw)
+            exported = True
+            print(f"exported with dynamo={dynamo}")
+            break
+        except Exception as e:
+            print(f"dynamo={dynamo} failed: {type(e).__name__}: {e}")
+    if not exported:
+        raise SystemExit("ONNX export failed with both dynamo and legacy exporters")
     export_s = time.time() - t0
+
+    n_fixed = fix_onnx_transpose_perms(path)
+    print(f"fixed {n_fixed} Transpose perm attributes with negative axes")
 
     import onnxruntime as ort
 
     so = ort.SessionOptions()
     so.intra_op_num_threads = os.cpu_count() or 2
-    sess = ort.InferenceSession(path, so, providers=["CPUExecutionProvider"])
-    feed = {"image": image.numpy()}
+    try:
+        sess = ort.InferenceSession(path, so, providers=["CPUExecutionProvider"])
+    except Exception as e:
+        # Last resort: write summary with failure detail and re-raise
+        summary = {
+            "component": "ltx_image_encoder",
+            "status": "ort_load_failed",
+            "error": str(e),
+            "transpose_perms_fixed": n_fixed,
+            "latent_shape": list(ref.shape),
+            "onnx_mb": round(os.path.getsize(path) / 1e6, 1),
+            "onnx_file": os.path.basename(path),
+            "note": "Graph exported but ORT refused to load it after perm rewrite.",
+        }
+        out_json = os.path.join(a.out, f"summary_image_encoder_{tag}.json")
+        with open(out_json, "w") as f:
+            json.dump(summary, f, indent=2)
+        print(json.dumps(summary, indent=2))
+        raise
+
+    feed = {"image": video.numpy()}
     got = sess.run(None, feed)[0]
     max_diff = float(np.abs(ref.numpy() - got).max())
 
@@ -104,13 +183,15 @@ def main():
         sess.run(None, feed)
         times.append(time.time() - s)
 
-    enc_params = sum(p.numel() for p in wrapper.parameters())
+    enc_params = sum(p.numel() for p in vwrap.parameters())
     summary = {
         "component": "ltx_image_encoder",
+        "status": "ok",
         "params_millions": round(enc_params / 1e6, 2),
         "scale_factor": a.scale_factor,
-        "input_shape": list(image.shape),
+        "input_shape": list(video.shape),
         "latent_shape": list(ref.shape),
+        "transpose_perms_fixed": n_fixed,
         "onnx_file": os.path.basename(path),
         "onnx_mb": round(os.path.getsize(path) / 1e6, 1),
         "onnx_sha256": sha256(path),
@@ -122,7 +203,7 @@ def main():
         "cpu_threads_used": so.intra_op_num_threads,
         "torch": torch.__version__,
         "onnxruntime": ort.__version__,
-        "note": "Encoder only (decoder deleted before export). Full LTX VAE on disk is larger.",
+        "note": "Encoder only. Input is [1,3,1,H,W] (single-frame video). Decoder is Turbo-VAED.",
     }
     out_json = os.path.join(a.out, f"summary_image_encoder_{tag}.json")
     with open(out_json, "w") as f:
