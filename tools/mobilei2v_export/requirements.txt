@@ -11,4 +11,8 @@ huggingface_hub==2.4.0
 pytz==2026.6
 ipdb==0.13.13
 termcolor==3.3.0
-# torch==2.15.0 is installed separately in the workflow (CPU wheel index first).
+# Imported directly by the MobileI2V model code (missing from the first CI run):
+importlib_metadata==10.2.0
+diffusers==0.43.0
+# torch==2.15.0 and torchvision==0.29.2 are installed separately in the workflow
+# (CPU wheel index first) so the two builds match.
